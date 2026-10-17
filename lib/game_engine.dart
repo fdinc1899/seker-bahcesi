@@ -19,6 +19,11 @@ class Cell {
 /// Kept optional in saves so V1/V2 Package 1 games load unchanged.
 enum SpecialKind { none, horizontal, vertical, colorBomb }
 
+/// On-board tile overlays. Ice uses codes 1 (cracked) and 2 (thick).
+/// Chocolate = 3 and locked sweet = 4. Zero represents an empty tile.
+enum ObstacleKind { none, ice, chocolate, lock }
+
+
 class Candy {
   const Candy(this.id, this.type, {this.special = SpecialKind.none});
   final int id;
@@ -81,7 +86,10 @@ class MatchEngine {
       : level = level,
         random = Random(seed) {
     moves = plan.totalMoves;
+    obstacles = _emptyObstacles();
     newBoard();
+    _placeLevelObstacles();
+    if (!hasMove()) newBoard();
   }
 
   MatchEngine._restored(this.level, this.random);
@@ -90,6 +98,97 @@ class MatchEngine {
   final Random random;
   LevelPlan get plan => LevelPlan(level);
   late List<List<Candy?>> board;
+  /// Overlay on board squares; optional in saves produced before Package 3.
+  late List<List<int>> obstacles;
+  static List<List<int>> _emptyObstacles() =>
+      List.generate(gridSize, (_) => List<int>.filled(gridSize, 0));
+
+  int obstacleCode(Cell cell) => obstacles[cell.row][cell.col];
+  ObstacleKind obstacleKind(Cell cell) {
+    final code = obstacleCode(cell);
+    return code == 0 ? ObstacleKind.none
+        : code <= 2 ? ObstacleKind.ice
+        : code == 3 ? ObstacleKind.chocolate : ObstacleKind.lock;
+  }
+
+  int get remainingObstacles => obstacles.fold<int>(0,
+      (sum, row) => sum + row.where((code) => code != 0).length);
+  int countObstacle(ObstacleKind kind) {
+    return obstacles.fold<int>(0, (sum, row) => sum + row.where((code) =>
+        kind == ObstacleKind.ice ? code == 1 || code == 2 :
+        kind == ObstacleKind.chocolate ? code == 3 :
+        kind == ObstacleKind.lock ? code == 4 : code == 0).length);
+  }
+
+  bool canSwap(Cell a, Cell b) => inBounds(a) && inBounds(b) &&
+      neighbors(a, b) && obstacleCode(a) < 3 && obstacleCode(b) < 3;
+
+  /// Keep the tutorial levels obstacle-free; introduce each mechanic gradually.
+  void _placeLevelObstacles() {
+    if (level < 3) return;
+    final placements = <int>[
+      ...List.filled(min(5, 1 + level ~/ 5), 2),
+      if (level >= 5) ...List.filled(min(4, 1 + level ~/ 12), 3),
+      if (level >= 7) ...List.filled(min(4, 1 + level ~/ 15), 4),
+    ];
+    final positions = [for (var r = 1; r < gridSize - 1; r++)
+      for (var c = 1; c < gridSize - 1; c++) Cell(r, c)]..shuffle(random);
+    for (var i = 0; i < placements.length; i++) {
+      final at = positions[i];
+      obstacles[at.row][at.col] = placements[i];
+    }
+  }
+
+  /// Each matched square damages its ice once. Neighbouring matches can
+  /// destroy chocolate and locks; blasts hitting a tile destroy those too.
+  /// Returns the number of overlays reduced or removed in this wave.
+  int damageObstacles(Set<Cell> removed) {
+    final hits = <Cell>{...removed};
+    for (final at in removed) {
+      for (final candidate in [
+        Cell(at.row - 1, at.col), Cell(at.row + 1, at.col),
+        Cell(at.row, at.col - 1), Cell(at.row, at.col + 1),
+      ]) {
+        if (inBounds(candidate) && obstacleCode(candidate) >= 3) {
+          hits.add(candidate);
+        }
+      }
+    }
+    var damaged = 0;
+    for (final at in hits) {
+      if (!inBounds(at)) continue;
+      final code = obstacleCode(at);
+      if (code == 0) continue;
+      obstacles[at.row][at.col] = code == 2 ? 1 : 0;
+      damaged++;
+    }
+    return damaged;
+  }
+
+  /// Chocolate slowly grows if it is ignored, up to six occupied squares.
+  /// A matched adjacent candy is enough to break it back down.
+  bool spreadChocolate() {
+    final sources = <Cell>[];
+    for (var r = 0; r < gridSize; r++) {
+      for (var c = 0; c < gridSize; c++) {
+        if (obstacles[r][c] == 3) sources.add(Cell(r, c));
+      }
+    }
+    if (sources.isEmpty || sources.length >= 6) return false;
+    final candidates = <Cell>{};
+    for (final source in sources) {
+      for (final at in [Cell(source.row - 1, source.col),
+        Cell(source.row + 1, source.col), Cell(source.row, source.col - 1),
+        Cell(source.row, source.col + 1)]) {
+        if (inBounds(at) && obstacleCode(at) == 0 &&
+            board[at.row][at.col] != null) candidates.add(at);
+      }
+    }
+    if (candidates.isEmpty) return false;
+    final at = candidates.elementAt(random.nextInt(candidates.length));
+    obstacles[at.row][at.col] = 3;
+    return true;
+  }
   late int moves;
   int score = 0;
   int collected = 0;
@@ -139,10 +238,12 @@ class MatchEngine {
       while (start < gridSize) {
         final piece = board[row][start];
         var end = start + 1;
-        if (piece != null && piece.special != SpecialKind.colorBomb) {
+        if (piece != null && obstacles[row][start] != 3 &&
+            piece.special != SpecialKind.colorBomb) {
           while (end < gridSize) {
             final next = board[row][end];
-            if (next == null || next.special == SpecialKind.colorBomb ||
+            if (next == null || obstacles[row][end] == 3 ||
+                next.special == SpecialKind.colorBomb ||
                 next.type != piece.type) break;
             end++;
           }
@@ -161,10 +262,12 @@ class MatchEngine {
       while (start < gridSize) {
         final piece = board[start][col];
         var end = start + 1;
-        if (piece != null && piece.special != SpecialKind.colorBomb) {
+        if (piece != null && obstacles[start][col] != 3 &&
+            piece.special != SpecialKind.colorBomb) {
           while (end < gridSize) {
             final next = board[end][col];
-            if (next == null || next.special == SpecialKind.colorBomb ||
+            if (next == null || obstacles[end][col] == 3 ||
+                next.special == SpecialKind.colorBomb ||
                 next.type != piece.type) break;
             end++;
           }
@@ -234,7 +337,7 @@ class MatchEngine {
   }
 
   bool createsMatch(Cell a, Cell b) {
-    if (!inBounds(a) || !inBounds(b) || !neighbors(a, b)) return false;
+    if (!canSwap(a, b)) return false;
     swap(a, b);
     final found = matches().isNotEmpty || specialCombo(a, b) != null;
     swap(a, b);
@@ -390,6 +493,7 @@ class MatchEngine {
         'score': score,
         'collected': collected,
         'nextId': nextId,
+        'obstacles': obstacles,
         'board': board.map((r) => r.map((c) => c?.toJson()).toList()).toList(),
       };
 
@@ -400,6 +504,25 @@ class MatchEngine {
     engine.score = (data['score'] as num).toInt();
     engine.collected = (data['collected'] as num).toInt();
     engine.nextId = (data['nextId'] as num).toInt();
+    final savedObstacles = data['obstacles'];
+    if (savedObstacles == null) {
+      engine.obstacles = _emptyObstacles();
+    } else {
+      if (savedObstacles is! List || savedObstacles.length != gridSize) {
+        throw const FormatException('Invalid obstacle rows');
+      }
+      engine.obstacles = savedObstacles.map((row) {
+        if (row is! List || row.length != gridSize) {
+          throw const FormatException('Invalid obstacle columns');
+        }
+        return row.map((value) {
+          if (value is! num || value.toInt() < 0 || value.toInt() > 4) {
+            throw const FormatException('Invalid obstacle value');
+          }
+          return value.toInt();
+        }).toList();
+      }).toList();
+    }
     final rows = data['board'] as List<dynamic>;
     if (rows.length != gridSize) throw const FormatException('Invalid rows');
     engine.board = rows.map((row) {

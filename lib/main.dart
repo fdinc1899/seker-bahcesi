@@ -167,6 +167,10 @@ class _SugarGardenState extends State<SugarGarden>
     final g = _game;
     if (g == null || _busy || _result != null ||
         !g.inBounds(a) || !g.inBounds(b) || !g.neighbors(a, b)) return;
+    if (!g.canSwap(a, b)) {
+      setState(() => _message = 'Önce çikolata veya kilidi kır!');
+      return;
+    }
     setState(() {
       _busy = true;
       _selected = null;
@@ -194,6 +198,7 @@ class _SugarGardenState extends State<SugarGarden>
     final g = _game;
     if (g == null) return;
     var chain = 1;
+    var damagedChocolate = false;
     var wave = firstWave ?? g.matchWave(preferred: preferred);
     while (!wave.isEmpty && chain <= 25) {
       final matched = wave.cells;
@@ -222,7 +227,15 @@ class _SugarGardenState extends State<SugarGarden>
       _burstAnimation.forward(from: 0);
       await Future<void>.delayed(const Duration(milliseconds: 280));
       if (!mounted) return;
+      final chocolateBefore = g.countObstacle(ObstacleKind.chocolate);
+      final damaged = g.damageObstacles(matched);
+      if (g.countObstacle(ObstacleKind.chocolate) < chocolateBefore) {
+        damagedChocolate = true;
+      }
       g.clear(matched, chain);
+      if (damaged > 0 && chain == 1) {
+        _message = 'ENGEL KIRILDI!';
+      }
       g.installSpecials(wave.spawns);
       final ids = g.collapse();
       setState(() {
@@ -237,6 +250,9 @@ class _SugarGardenState extends State<SugarGarden>
       });
       wave = g.matchWave();
       chain++;
+    }
+    if (g.moves > 0 && !g.won && !damagedChocolate) {
+      g.spreadChocolate();
     }
     if (!g.hasMove()) {
       g.newBoard();
@@ -354,6 +370,9 @@ class _SugarGardenState extends State<SugarGarden>
           '• 4 şeker: satır veya sütun patlatan çizgili şeker.\n\n'
           '• 5 şeker: renk bombası. Renk bombasını komşu bir şekerle değiştir.\n\n'
           '• İki özel şekeri yan yana değiştirerek büyük patlama yap.\n\n'
+          '• Bölüm 3’ten itibaren buz iki darbede kırılır.\n\n'
+          '• Çikolata eşleşmeleri engeller ve temizlenmezse yayılır.\n\n'
+          '• Kilitli şekeri hareket ettiremezsin; komşu eşleşmeyle kilidi aç.\n\n'
           '• Hamlelerin bitmeden hedef puana ulaş veya istenen şekeri topla.\n\n'
           '• Çekiç, satır patlatma ve karıştırma güçlerini kullan.\n\n'
           '• Başarılı olduğunda yeni bölümler açılır.',
@@ -659,7 +678,9 @@ class _SugarGardenState extends State<SugarGarden>
             ),
           ]),
           Padding(padding: const EdgeInsets.only(bottom: 10),
-            child: Text('4 eşleşme: çizgili • 5 eşleşme: renk bombası',
+            child: Text(g.remainingObstacles > 0
+                ? 'BUZ: ${g.countObstacle(ObstacleKind.ice)}   ÇİKOLATA: ${g.countObstacle(ObstacleKind.chocolate)}   KİLİT: ${g.countObstacle(ObstacleKind.lock)}'
+                : '4 eşleşme: çizgili • 5 eşleşme: renk bombası',
                 style: TextStyle(fontSize: compact ? 10 : 11,
                     color: const Color(0xFF84478E),
                     fontWeight: FontWeight.w700)),
@@ -735,6 +756,17 @@ class _SugarGardenState extends State<SugarGarden>
                   child: _candyOnBoard(g.board[r][c]!, r, cell),
                 ),
           ],
+          // Animated obstacle overlays: chocolate blocks swaps, ice takes
+          // two hits, and locks require a blast or neighbouring match.
+          ...[for (var r = 0; r < gridSize; r++)
+            for (var c = 0; c < gridSize; c++)
+              if (g.obstacles[r][c] > 0)
+                Positioned(
+                  left: inset + c * cell, top: inset + r * cell,
+                  width: cell, height: cell,
+                  child: IgnorePointer(child: _obstacleTile(g.obstacles[r][c])),
+                ),
+          ],
           IgnorePointer(child: AnimatedBuilder(
             animation: _burstAnimation,
             builder: (context, child) => CustomPaint(
@@ -787,6 +819,46 @@ class _SugarGardenState extends State<SugarGarden>
             onPanCancel: () => _dragStart = null,
           )),
         ]),
+      ),
+    );
+  }
+
+  Widget _obstacleTile(int code) {
+    final isIce = code <= 2;
+    final isChoco = code == 3;
+    return Padding(
+      padding: const EdgeInsets.all(1.8),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(7),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+            colors: isIce
+                ? [const Color(0x77F4FFFF), const Color(0x779BCFEF)]
+                : isChoco
+                    ? [const Color(0xFFEAA071), const Color(0xFF753352)]
+                    : [const Color(0x99885ED0), const Color(0xBB361E71)],
+          ),
+          border: Border.all(
+            color: isIce ? const Color(0xDDFFFFFF)
+                : isChoco ? const Color(0xFFFFD09F)
+                : const Color(0xFFFFE39A),
+            width: code == 2 ? 2.7 : 1.5,
+          ),
+          boxShadow: const [BoxShadow(color: Color(0x55281557), blurRadius: 3)],
+        ),
+        child: Center(
+          child: isIce
+              ? Icon(code == 2 ? Icons.ac_unit_rounded : Icons.auto_awesome,
+                  size: _boardCell * .43, color: Colors.white,
+                  shadows: const [Shadow(color: Color(0xFF54B6EE), blurRadius: 5)])
+              : isChoco
+                  ? Icon(Icons.grid_view_rounded, size: _boardCell * .65,
+                      color: const Color(0xFFFFD7A0))
+                  : Icon(Icons.lock_rounded, size: _boardCell * .51,
+                      color: const Color(0xFFFFE99B),
+                      shadows: const [Shadow(color: Color(0xFF41206B), blurRadius: 4)]),
+        ),
       ),
     );
   }

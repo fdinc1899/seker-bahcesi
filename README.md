@@ -1,20 +1,18 @@
-# Şeker Bahçesi 🍬 — Flutter Match-3 Oyunu (V2 Paket 2)
+# Şeker Bahçesi 🍬 — Flutter Match-3 Oyunu (V2 Paket 3)
 
 Android ve iOS için tasarlanan, özgün çizimli Türkçe eşleştirme oyunu. **Candy Crush Saga'nın bir kopyası değildir:** King'e ait isim, grafik veya sesler bu projede kullanılmaz.
 
-## V2 Paket 2: Özel şekerler ve kombo zincirleri
+## V2 Paket 3: Buz, çikolata ve kilitli kareler
 
-- **4'lü yatay eşleşme** yatay çizgili şeker üretir; dikey eşleşme dikey çizgili şeker üretir.
-- **5'li yatay/dikey eşleşme** renk bombası üretir; yanındaki normal şekerle değiştirilince onun rengindeki taşları temizler.
-- Çizgili şeker normal eşleşmeyle tetiklenince kendi satır/sütununu temizler.
-- **İki çizgili şeker**, **renk bombası + çizgili şeker** ve **iki renk bombası** birleştirilebilir.
-- Özel şekerler ekranda ayırt edilebilir çizgili veya gökkuşağı benekli görseller kullanır.
-- Zincir patlamalarında mevcut V2 parçacık ve düşüş animasyonları korunur.
-- Eski V1/V2 kayıtlarıyla uyumlu: yeni `special` alanı isteğe bağlıdır, önceki kayıt anahtarları değişmez.
-- 60 bölüm korunmuştur; hedef, puan, hamle ve güçlendirici mantığı değişmemiştir.
-- **Buz, çikolata, kilitli kareler ve yeni ses paketi bu pakete dahil değildir.** Yeni bölüm hedefleriyle birlikte ayrıca geliştirilebilir.
+- **3. bölümden itibaren buz:** aynı karenin üzerinde yapılan iki eşleşme/patlama ile kırılır (kalın buz → çatlak buz → açık kare).
+- **5. bölümden itibaren çikolata:** üzerine sürükleme yapılamaz; komşu eşleşmeler veya doğrudan patlamayla temizlenir. Her başarılı hamle sonunda hiç çikolata kırılmadıysa en fazla 6 kareye kadar yayılabilir.
+- **7. bölümden itibaren kilit:** kilitli şeker sürüklenemez; komşu eşleşme veya özel patlamayla kilidi çözülür.
+- Her engelin oyun tahtası üzerinde ayrı simgesi, altında **buz / çikolata / kilit sayacı** vardır. Bölüm 1–2 mevcut öğretici akışla aynıdır.
+- Mevcut 60 bölüm, özel şekerler, güçlendiriciler, puan hedefi ve yıldız sistemi korunur. Engeller şimdilik mevcut bölüm hedeflerine **ek kazanma şartı değildir**.
+- Eski kayıtlarda `obstacles` alanı yoksa boş olarak okunur; yeni kayıtlar katmanları taşır. Önceden başlamış ileri bölüm oturumlarına yeni engel sonradan zorla eklenmez.
+- Yedi engel testi eklendi, `flutter_launcher_icons` iOS kapalı kalır. **Bu ortamda Flutter SDK yok; APK ve Flutter testleri GitHub Actions üzerinden doğrulanmalıdır.**
 
-> Kaynak kodu ve 7 yeni mantık testi ve görsel test hazırlanmıştır. Bu çalışma ortamında Flutter SDK bulunmadığı için gerçek `flutter test` ve APK derlemesi burada çalıştırılamadı. GitHub Actions yeniden derleme/test yapacaktır; sonuç garanti değildir.
+> Bu güncelleme yeni özel ses kayıtlarını, farklı bölüm hedefleri veya çok katmanlı Jelly mekaniklerini henüz içermez. Çikolata ve kilit ilk oynanış prototipidir; zorluk dengesi gerçek cihazda test edilmelidir.
 
 ## Hazır özellikler
 
@@ -36,7 +34,7 @@ Android ve iOS için tasarlanan, özgün çizimli Türkçe eşleştirme oyunu. *
 1. ZIP'i telefonda aç ve içindeki **dosya ve klasörleri** yeni bir GitHub deposuna yükle. *ZIP dosyasının kendisini yüklemek yeterli değildir.* `.github` gizli klasörünü de dahil et.
 2. GitHub deposunu **Public veya Private** oluştur, varsayılan dal `main` olsun.
 3. Üst menüden **Actions → Android APK oluştur → Run workflow**'a dokun (ilk yüklemede otomatik de çalışır).
-4. Yeşil onay geldikten sonra çalışmaya gir, **Artifacts** altında `seker-bahcesi-v2-test-apk` dosyasını indir.
+4. Yeşil onay geldikten sonra çalışmaya gir, **Artifacts** altında `seker-bahcesi-v2-paket3-test-apk` dosyasını indir.
 5. Artifact ZIP'ini çıkar, içindeki `app-debug.apk`'yi Android telefona kur. Telefon izin isterse yalnızca kendi oluşturduğun APK için kurulum izni ver.
 
 > Bu APK geliştirici test sürümüdür. **Google Play'e doğrudan yüklenmez.** Mağaza için eşsiz paket adı, ikon, tanıtım görselleri, gizlilik bilgileri, uygulama imzası ve imzalı `.aab` gerekir.
@@ -63,7 +61,7 @@ flutter run
 - `lib/game_engine.dart`: saf Dart eşleştirme ve puanlama motoru
 - `lib/candy_art.dart`: bağımsız vektör şeker ve arka plan çizimleri
 - `lib/main.dart`: animasyonlar, ekranlar, kayıt ve kontroller
-- `test/game_engine_test.dart`, `test/special_candy_test.dart`: tahta, hamle, kayıt ve güç patlatma testleri
+- `test/game_engine_test.dart`, `test/special_candy_test.dart`, `test/obstacle_test.dart`: tahta, hamle, kayıt ve güç patlatma testleri
 - `.github/workflows/android-apk.yml`: otomatik Android test APK derleme
 
 ### Bilinmesi gerekenler
@@ -85,7 +83,7 @@ silinebilir. Önce mevcut kurulumun yedeği/uygun imzalama yolu belirlenmelidir.
 V2 paketinde motor ve `shared_preferences` anahtarları değiştirilmemiştir.
 Bu, aynı imzayla güncelleme yapılabildiği durumlarda mevcut kayıtların korunmasını sağlar.
 
-## Telefonunda V2 Paket 2 güncellemesi
+## Telefonunda V2 Paket 3 güncellemesi
 
 1. ZIP dosyasını telefonun `Download` klasörüne kaydet.
 2. Termux'ta mevcut `~/seker-bahcesi` Git deposuna yeni sürüm dosyalarını kopyala ve `main` dalına gönder.
