@@ -1,6 +1,17 @@
-# Şeker Bahçesi 🍬 — Flutter Match-3 Oyunu
+# Şeker Bahçesi 🍬 — Flutter Match-3 Oyunu (V2 Paket 1)
 
 Android ve iOS için tasarlanan, özgün çizimli Türkçe eşleştirme oyunu. **Candy Crush Saga'nın bir kopyası değildir:** King'e ait isim, grafik veya sesler bu projede kullanılmaz.
+
+## V2 Paket 1: Görsel ve animasyon güncellemesi
+
+- Daha yoğun ışık katmanları ve cam şeker parlaklığı
+- Altın/pembe tahta çerçevesi, iki tonlu kabartmalı taş yuvaları
+- Eşleşme sırasında halkalar, yıldız parçacıkları ve ekranda kombo yazısı
+- Var olan şekerlerde 355 ms konum geçişi; yeni şekerlerde yukarıdan düşüş animasyonu
+- Yatay/dikey sürükleme ve kayıt sistemi **korundu**, 60 bölüm değişmedi
+- GitHub Actions Android sürümünde iOS simgesi **kapalı** (`ios: false`); iOS için Mac/Xcode üzerinde tekrar etkinleştirilir
+
+> Grafik güncellemesinin telefondaki görünümü henüz bu pakette fiziksel cihazda doğrulanmadı. GitHub Actions derlemesini ve oyun içi testi çalıştırın.
 
 ## Hazır özellikler
 
@@ -22,7 +33,7 @@ Android ve iOS için tasarlanan, özgün çizimli Türkçe eşleştirme oyunu. *
 1. ZIP'i telefonda aç ve içindeki **dosya ve klasörleri** yeni bir GitHub deposuna yükle. *ZIP dosyasının kendisini yüklemek yeterli değildir.* `.github` gizli klasörünü de dahil et.
 2. GitHub deposunu **Public veya Private** oluştur, varsayılan dal `main` olsun.
 3. Üst menüden **Actions → Android APK oluştur → Run workflow**'a dokun (ilk yüklemede otomatik de çalışır).
-4. Yeşil onay geldikten sonra çalışmaya gir, **Artifacts** altında `seker-bahcesi-test-apk` dosyasını indir.
+4. Yeşil onay geldikten sonra çalışmaya gir, **Artifacts** altında `seker-bahcesi-v2-test-apk` dosyasını indir.
 5. Artifact ZIP'ini çıkar, içindeki `app-debug.apk`'yi Android telefona kur. Telefon izin isterse yalnızca kendi oluşturduğun APK için kurulum izni ver.
 
 > Bu APK geliştirici test sürümüdür. **Google Play'e doğrudan yüklenmez.** Mağaza için eşsiz paket adı, ikon, tanıtım görselleri, gizlilik bilgileri, uygulama imzası ve imzalı `.aab` gerekir.
@@ -34,6 +45,7 @@ Flutter SDK (Dart >=3.4) kurulu bir bilgisayarda:
 ```bash
 flutter create --platforms=android,ios --project-name seker_bahcesi .
 flutter pub get
+# iOS ikon üretimi için pubspec.yaml içindeki ios: false değerini true yap
 dart run flutter_launcher_icons
 flutter test
 flutter run
@@ -57,3 +69,15 @@ flutter run
 - Güçlendiriciler ilk oyunda 3/2/3 adet verilir; şu sürümde yenilenmez.
 - Kayıt yalnızca bu cihazdadır; Google hesabına bulut kaydı yapılmaz.
 - Üretim sürümünden önce farklı telefon boyutları, erişilebilirlik, denge ve uygulama güvenliği testleri yapılmalıdır.
+
+## V2 güncelleme ve kayıt güvenliği
+
+V2, V1 ile aynı oyun ilerleme anahtarlarını (`unlocked`, `stars`, `session`, güçler)
+kullanır. **Ancak GitHub Actions'ın her çalıştırmada yeniden imzaladığı debug APK'lar**
+Android tarafından farklı sertifikalı görülebilir: güncelleme sırasında
+`Uygulama yüklenmedi` hatası oluşursa **oyunu silmeyin**; cihazdaki kayıtlar
+silinebilir. Önce mevcut kurulumun yedeği/uygun imzalama yolu belirlenmelidir.
+İmzalı sürümler için kalıcı bir güvenli imzalama altyapısı gereklidir.
+
+V2 paketinde motor ve `shared_preferences` anahtarları değiştirilmemiştir.
+Bu, aynı imzayla güncelleme yapılabildiği durumlarda mevcut kayıtların korunmasını sağlar.

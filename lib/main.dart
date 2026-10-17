@@ -42,6 +42,7 @@ class _SugarGardenState extends State<SugarGarden>
   Cell? _dragStart;
   Offset _dragDistance = Offset.zero;
   String _message = 'Üç veya daha fazla şekeri eşleştir!';
+  String _comboBanner = '';
   Set<int> _vanishing = {};
   Set<int> _newborn = {};
   List<Offset> _burstPositions = [];
@@ -54,7 +55,7 @@ class _SugarGardenState extends State<SugarGarden>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _burstAnimation = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 560));
+        vsync: this, duration: const Duration(milliseconds: 690));
     _load();
   }
 
@@ -144,6 +145,9 @@ class _SugarGardenState extends State<SugarGarden>
       _selected = null;
       _power = PowerMode.none;
       _message = 'Şekerleri sürükle ve eşleştir!';
+      _comboBanner = '';
+      _vanishing = {};
+      _newborn = {};
     });
     _fx();
     _save();
@@ -169,14 +173,14 @@ class _SugarGardenState extends State<SugarGarden>
       _message = '';
       g.swap(a, b);
     });
-    await Future<void>.delayed(const Duration(milliseconds: 205));
+    await Future<void>.delayed(const Duration(milliseconds: 315));
     if (!mounted) return;
     if (g.matches().isEmpty) {
       setState(() {
         g.swap(a, b);
         _message = 'Bu hamle eşleşme oluşturmuyor.';
       });
-      await Future<void>.delayed(const Duration(milliseconds: 190));
+      await Future<void>.delayed(const Duration(milliseconds: 315));
       if (mounted) setState(() => _busy = false);
       return;
     }
@@ -207,9 +211,10 @@ class _SugarGardenState extends State<SugarGarden>
             .toSet();
         _message = chain > 1 ? 'SÜPER KOMBO x$chain!' :
             (matched.length >= 5 ? 'MUHTEŞEM!' : 'HARİKA!');
+        _comboBanner = _message;
       });
       _burstAnimation.forward(from: 0);
-      await Future<void>.delayed(const Duration(milliseconds: 230));
+      await Future<void>.delayed(const Duration(milliseconds: 280));
       if (!mounted) return;
       g.clear(matched, chain);
       final ids = g.collapse();
@@ -217,9 +222,12 @@ class _SugarGardenState extends State<SugarGarden>
         _vanishing = {};
         _newborn = ids.toSet();
       });
-      await Future<void>.delayed(const Duration(milliseconds: 255));
+      await Future<void>.delayed(const Duration(milliseconds: 450));
       if (!mounted) return;
-      setState(() => _newborn = {});
+      setState(() {
+        _newborn = {};
+        _comboBanner = '';
+      });
       matched = g.matches();
       chain++;
     }
@@ -659,17 +667,20 @@ class _SugarGardenState extends State<SugarGarden>
     return Container(
       width: side, height: side,
       decoration: BoxDecoration(
-        color: const Color(0xFF7D3BBB),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+          colors: [Color(0xFFFAE79E), Color(0xFFFFD46B), Color(0xFFFFA1C9)]),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFFFE58B), width: 6),
+        border: Border.all(color: const Color(0xFFFFE9A5), width: 6),
         boxShadow: const [
-          BoxShadow(color: Color(0x99902599), blurRadius: 16, offset: Offset(0, 9)),
-          BoxShadow(color: Color(0x99FFFFFF), blurRadius: 3,
-              offset: Offset(0, -2)),
+          BoxShadow(color: Color(0x994D167A), blurRadius: 22, offset: Offset(0, 12)),
+          BoxShadow(color: Color(0xAAFFFFFF), blurRadius: 6,
+              offset: Offset(0, -3)),
         ],
       ),
       child: ClipRRect(borderRadius: BorderRadius.circular(15),
         child: Stack(children: [
+          const Positioned.fill(child: ColoredBox(color: Color(0xFF6530A1))),
           ...[for (var r = 0; r < gridSize; r++)
             for (var c = 0; c < gridSize; c++)
               Positioned(left: inset + c * cell, top: inset + r * cell,
@@ -677,11 +688,15 @@ class _SugarGardenState extends State<SugarGarden>
                 child: Container(
                   margin: const EdgeInsets.all(.7),
                   decoration: BoxDecoration(
-                    color: (r + c).isEven
-                        ? const Color(0xFFB987E0)
-                        : const Color(0xFFAC76D7),
-                    borderRadius: BorderRadius.circular(5),
-                    border: Border.all(color: const Color(0x227343AD)),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: (r + c).isEven
+                        ? const [Color(0xFFCD9EF5), Color(0xFF9F5ACF)]
+                        : const [Color(0xFFB87CE5), Color(0xFF8850BB)],
+                    ),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0x44EAD4FF), width: .8),
                   ),
                 ),
               ),
@@ -703,23 +718,11 @@ class _SugarGardenState extends State<SugarGarden>
               if (g.board[r][c] != null)
                 AnimatedPositioned(
                   key: ValueKey('candy-${g.board[r][c]!.id}'),
-                  duration: const Duration(milliseconds: 205),
+                  duration: const Duration(milliseconds: 355),
                   curve: Curves.easeOutCubic,
                   left: inset + c * cell, top: inset + r * cell,
                   width: cell, height: cell,
-                  child: AnimatedScale(
-                    duration: const Duration(milliseconds: 180),
-                    scale: _vanishing.contains(g.board[r][c]!.id) ? 0 :
-                        (_newborn.contains(g.board[r][c]!.id) ? .80 : 1),
-                    child: AnimatedOpacity(
-                      duration: const Duration(milliseconds: 170),
-                      opacity: _vanishing.contains(g.board[r][c]!.id) ? 0 : 1,
-                      child: Center(child: CandyPiece(
-                        type: g.board[r][c]!.type,
-                        size: cell * .91,
-                      )),
-                    ),
-                  ),
+                  child: _candyOnBoard(g.board[r][c]!, r, cell),
                 ),
           ],
           IgnorePointer(child: AnimatedBuilder(
@@ -731,6 +734,35 @@ class _SugarGardenState extends State<SugarGarden>
                 centers: _burstPositions,
                 colors: _burstColors.isEmpty ? [Colors.white] : _burstColors,
               ),
+            ),
+          )),
+          Positioned.fill(child: IgnorePointer(
+            child: AnimatedBuilder(
+              animation: _burstAnimation,
+              builder: (context, _) {
+                final p = _burstAnimation.value;
+                final visibility = (1 - ((p - .42) / .58)).clamp(0.0, 1.0);
+                final size = .75 + Curves.elasticOut.transform(
+                    (p * 2.5).clamp(0.0, 1.0)) * .32;
+                return Center(child: Opacity(
+                  opacity: _comboBanner.isEmpty ? 0 : visibility,
+                  child: Transform.scale(scale: size,
+                    child: Text(_comboBanner,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: side * .079, fontWeight: FontWeight.w900,
+                        letterSpacing: -.4, color: const Color(0xFFFFF2A8),
+                        shadows: const [
+                          Shadow(color: Color(0xFFFF3F9A), blurRadius: 4,
+                            offset: Offset(2, 3)),
+                          Shadow(color: Color(0xFF742192), blurRadius: 13,
+                            offset: Offset(0, 5)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ));
+              },
             ),
           )),
           Positioned.fill(child: GestureDetector(
@@ -745,6 +777,34 @@ class _SugarGardenState extends State<SugarGarden>
             onPanCancel: () => _dragStart = null,
           )),
         ]),
+      ),
+    );
+  }
+
+  /// Existing candy IDs stay in AnimatedPositioned for smooth gravity;
+  /// freshly spawned IDs fall in from above instead of popping in place.
+  Widget _candyOnBoard(Candy candy, int row, double cell) {
+    final vanishing = _vanishing.contains(candy.id);
+    final newborn = _newborn.contains(candy.id);
+    final art = Center(child: CandyPiece(type: candy.type, size: cell * .94));
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 240),
+      opacity: vanishing ? 0 : 1,
+      child: AnimatedScale(
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeInBack,
+        scale: vanishing ? .12 : 1,
+        child: newborn
+            ? TweenAnimationBuilder<double>(
+                key: ValueKey('fall-${candy.id}'),
+                tween: Tween(begin: -(row + 3) * cell, end: 0),
+                duration: const Duration(milliseconds: 425),
+                curve: Curves.easeOutBack,
+                builder: (context, dy, child) => Transform.translate(
+                  offset: Offset(0, dy), child: child),
+                child: art,
+              )
+            : art,
       ),
     );
   }
