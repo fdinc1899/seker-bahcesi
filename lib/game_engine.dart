@@ -16,14 +16,31 @@ class Cell {
   int get hashCode => Object.hash(row, col);
 }
 
+/// Kept optional in saves so V1/V2 Package 1 games load unchanged.
+enum SpecialKind { none, horizontal, vertical, colorBomb }
+
 class Candy {
-  const Candy(this.id, this.type);
+  const Candy(this.id, this.type, {this.special = SpecialKind.none});
   final int id;
   final int type;
+  final SpecialKind special;
 
-  Map<String, int> toJson() => {'id': id, 'type': type};
-  factory Candy.fromJson(Map<String, dynamic> m) =>
-      Candy((m['id'] as num).toInt(), (m['type'] as num).toInt());
+  Map<String, int> toJson() => {
+        'id': id,
+        'type': type,
+        if (special != SpecialKind.none) 'special': special.index,
+      };
+
+  factory Candy.fromJson(Map<String, dynamic> m) {
+    final raw = (m['special'] as num?)?.toInt() ?? 0;
+    return Candy(
+      (m['id'] as num).toInt(),
+      (m['type'] as num).toInt(),
+      special: raw >= 0 && raw < SpecialKind.values.length
+          ? SpecialKind.values[raw]
+          : SpecialKind.none,
+    );
+  }
 }
 
 class LevelPlan {
@@ -42,6 +59,21 @@ class LevelPlan {
     ];
     return names[(level - 1) % names.length];
   }
+}
+
+class MatchGroup {
+  const MatchGroup(this.cells, {required this.horizontal});
+  final List<Cell> cells;
+  final bool horizontal;
+}
+
+/// An atomic resolution: disappear these cells, then create any power candies.
+/// Spawn cells are *not* cleared, unless swept up by another special effect.
+class MatchWave {
+  const MatchWave(this.cells, {this.spawns = const <Cell, SpecialKind>{}});
+  final Set<Cell> cells;
+  final Map<Cell, SpecialKind> spawns;
+  bool get isEmpty => cells.isEmpty && spawns.isEmpty;
 }
 
 class MatchEngine {
@@ -63,7 +95,8 @@ class MatchEngine {
   int collected = 0;
   int nextId = 0;
 
-  Candy _newCandy(int type) => Candy(nextId++, type);
+  Candy _newCandy(int type, {SpecialKind special = SpecialKind.none}) =>
+      Candy(nextId++, type, special: special);
 
   void newBoard() {
     for (var attempt = 0; attempt < 400; attempt++) {
@@ -71,12 +104,10 @@ class MatchEngine {
       for (var r = 0; r < gridSize; r++) {
         for (var c = 0; c < gridSize; c++) {
           final allowed = List.generate(candyTypes, (i) => i);
-          if (c >= 2 &&
-              board[r][c - 1]?.type == board[r][c - 2]?.type) {
+          if (c >= 2 && board[r][c - 1]?.type == board[r][c - 2]?.type) {
             allowed.remove(board[r][c - 1]!.type);
           }
-          if (r >= 2 &&
-              board[r - 1][c]?.type == board[r - 2][c]?.type) {
+          if (r >= 2 && board[r - 1][c]?.type == board[r - 2][c]?.type) {
             allowed.remove(board[r - 1][c]!.type);
           }
           board[r][c] = _newCandy(allowed[random.nextInt(allowed.length)]);
@@ -99,21 +130,27 @@ class MatchEngine {
     board[b.row][b.col] = temp;
   }
 
-  Set<Cell> matches() {
-    final result = <Cell>{};
+  /// Longest contiguous, same-type horizontal and vertical groups.
+  /// Color bombs never automatically count toward a regular color match.
+  List<MatchGroup> matchGroups() {
+    final groups = <MatchGroup>[];
     for (var row = 0; row < gridSize; row++) {
       var start = 0;
       while (start < gridSize) {
-        final type = board[row][start]?.type;
+        final piece = board[row][start];
         var end = start + 1;
-        if (type != null) {
-          while (end < gridSize && board[row][end]?.type == type) {
+        if (piece != null && piece.special != SpecialKind.colorBomb) {
+          while (end < gridSize) {
+            final next = board[row][end];
+            if (next == null || next.special == SpecialKind.colorBomb ||
+                next.type != piece.type) break;
             end++;
           }
           if (end - start >= 3) {
-            for (var c = start; c < end; c++) {
-              result.add(Cell(row, c));
-            }
+            groups.add(MatchGroup(
+              [for (var c = start; c < end; c++) Cell(row, c)],
+              horizontal: true,
+            ));
           }
         }
         start = end;
@@ -122,28 +159,84 @@ class MatchEngine {
     for (var col = 0; col < gridSize; col++) {
       var start = 0;
       while (start < gridSize) {
-        final type = board[start][col]?.type;
+        final piece = board[start][col];
         var end = start + 1;
-        if (type != null) {
-          while (end < gridSize && board[end][col]?.type == type) {
+        if (piece != null && piece.special != SpecialKind.colorBomb) {
+          while (end < gridSize) {
+            final next = board[end][col];
+            if (next == null || next.special == SpecialKind.colorBomb ||
+                next.type != piece.type) break;
             end++;
           }
           if (end - start >= 3) {
-            for (var r = start; r < end; r++) {
-              result.add(Cell(r, col));
-            }
+            groups.add(MatchGroup(
+              [for (var r = start; r < end; r++) Cell(r, col)],
+              horizontal: false,
+            ));
           }
         }
         start = end;
       }
     }
-    return result;
+    return groups;
+  }
+
+  Set<Cell> matches() => {
+        for (final group in matchGroups()) ...group.cells,
+      };
+
+  /// Detect a swap-activated combo before deciding whether the move is legal.
+  /// a and b are the *post-swap* positions.
+  MatchWave? specialCombo(Cell a, Cell b) {
+    if (!inBounds(a) || !inBounds(b) || !neighbors(a, b)) return null;
+    final x = board[a.row][a.col];
+    final y = board[b.row][b.col];
+    if (x == null || y == null) return null;
+    final bombX = x.special == SpecialKind.colorBomb;
+    final bombY = y.special == SpecialKind.colorBomb;
+    if (bombX || bombY) {
+      if (bombX && bombY) {
+        return MatchWave({for (var r = 0; r < gridSize; r++)
+          for (var c = 0; c < gridSize; c++) Cell(r, c)});
+      }
+      final other = bombX ? y : x;
+      final removed = <Cell>{a, b};
+      for (var r = 0; r < gridSize; r++) {
+        for (var c = 0; c < gridSize; c++) {
+          if (board[r][c]?.type == other.type) {
+            removed.add(Cell(r, c));
+            // Bomb + stripe turns all of that color into line blasts.
+            if (other.special == SpecialKind.horizontal) {
+              for (var k = 0; k < gridSize; k++) removed.add(Cell(r, k));
+            } else if (other.special == SpecialKind.vertical) {
+              for (var k = 0; k < gridSize; k++) removed.add(Cell(k, c));
+            }
+          }
+        }
+      }
+      return waveForCells(removed);
+    }
+    final stripedX = x.special == SpecialKind.horizontal ||
+        x.special == SpecialKind.vertical;
+    final stripedY = y.special == SpecialKind.horizontal ||
+        y.special == SpecialKind.vertical;
+    if (stripedX && stripedY) {
+      final removed = <Cell>{a, b};
+      for (final pos in [a, b]) {
+        for (var i = 0; i < gridSize; i++) {
+          removed.add(Cell(pos.row, i));
+          removed.add(Cell(i, pos.col));
+        }
+      }
+      return waveForCells(removed);
+    }
+    return null;
   }
 
   bool createsMatch(Cell a, Cell b) {
     if (!inBounds(a) || !inBounds(b) || !neighbors(a, b)) return false;
     swap(a, b);
-    final found = matches().isNotEmpty;
+    final found = matches().isNotEmpty || specialCombo(a, b) != null;
     swap(a, b);
     return found;
   }
@@ -163,19 +256,102 @@ class MatchEngine {
     return false;
   }
 
-  /// Called after the disappearance animation finishes.
-  void clear(Set<Cell> cells, int chain) {
-    for (final cell in cells) {
+  /// Create striped candies on lines of 4 and rainbow bombs on lines of 5+.
+  /// Preference is the dragged destination, if part of the match.
+  MatchWave matchWave({Cell? preferred}) {
+    final groups = matchGroups();
+    final removed = <Cell>{for (final group in groups) ...group.cells};
+    final spawns = <Cell, SpecialKind>{};
+    // Longer groups take priority when multiple matches cross.
+    groups.sort((a, b) => b.cells.length.compareTo(a.cells.length));
+    for (final group in groups) {
+      if (group.cells.length < 4) continue;
+      final type = group.cells.length >= 5
+          ? SpecialKind.colorBomb
+          : group.horizontal ? SpecialKind.horizontal : SpecialKind.vertical;
+      final candidates = <Cell>[
+        if (preferred != null && group.cells.contains(preferred)) preferred,
+        group.cells[group.cells.length ~/ 2],
+        ...group.cells,
+      ];
+      Cell? anchor;
+      for (final spot in candidates) {
+        if (spawns.containsKey(spot)) continue;
+        if (board[spot.row][spot.col]?.special == SpecialKind.none) {
+          anchor = spot;
+          break;
+        }
+      }
+      if (anchor != null) spawns[anchor] = type;
+    }
+    removed.removeAll(spawns.keys);
+    final expanded = waveForCells(removed).cells;
+    // Another power might destroy the newly spawned special this same turn.
+    for (final spot in spawns.keys.toList()) {
+      if (expanded.contains(spot)) spawns.remove(spot);
+    }
+    return MatchWave(expanded, spawns: spawns);
+  }
+
+  /// Expands line / rainbow special explosions, including chain reactions.
+  MatchWave waveForCells(Set<Cell> initial) {
+    final removed = <Cell>{};
+    final queue = <Cell>[...initial];
+    for (var i = 0; i < queue.length; i++) {
+      final cell = queue[i];
+      if (!inBounds(cell) || !removed.add(cell)) continue;
       final candy = board[cell.row][cell.col];
       if (candy == null) continue;
+      if (candy.special == SpecialKind.horizontal) {
+        for (var col = 0; col < gridSize; col++) {
+          queue.add(Cell(cell.row, col));
+        }
+      } else if (candy.special == SpecialKind.vertical) {
+        for (var row = 0; row < gridSize; row++) {
+          queue.add(Cell(row, cell.col));
+        }
+      } else if (candy.special == SpecialKind.colorBomb) {
+        for (var row = 0; row < gridSize; row++) {
+          for (var col = 0; col < gridSize; col++) {
+            if (board[row][col]?.type == candy.type) {
+              queue.add(Cell(row, col));
+            }
+          }
+        }
+      }
+    }
+    return MatchWave(removed);
+  }
+
+  /// Called after the disappearance animation finishes.
+  void clear(Set<Cell> cells, int chain) {
+    var count = 0;
+    for (final cell in cells) {
+      if (!inBounds(cell)) continue;
+      final candy = board[cell.row][cell.col];
+      if (candy == null) continue;
+      count++;
       if (plan.isCollection && candy.type == plan.focusType) collected++;
       board[cell.row][cell.col] = null;
     }
-    score += cells.length * (100 + (chain - 1) * 55);
-    if (cells.length >= 4) score += (cells.length - 3) * 60;
+    score += count * (100 + (chain - 1) * 55);
+    if (count >= 4) score += (count - 3) * 60;
   }
 
-  /// Gravity: retain candy IDs so AnimatedPositioned animates existing pieces.
+  /// Anchor positions remain occupied before gravity; IDs are unique.
+  void installSpecials(Map<Cell, SpecialKind> creations) {
+    for (final entry in creations.entries) {
+      final cell = entry.key;
+      final original = board[cell.row][cell.col];
+      if (original != null) {
+        board[cell.row][cell.col] =
+            _newCandy(original.type, special: entry.value);
+        score += entry.value == SpecialKind.colorBomb ? 400 : 160;
+      }
+    }
+  }
+
+  /// Gravity: preserve IDs to drive AnimatedPositioned movement.
   List<int> collapse() {
     final created = <int>[];
     for (var c = 0; c < gridSize; c++) {
@@ -197,7 +373,8 @@ class MatchEngine {
     return created;
   }
 
-  bool get won => plan.isCollection ? collected >= plan.target : score >= plan.target;
+  bool get won =>
+      plan.isCollection ? collected >= plan.target : score >= plan.target;
   double get progress =>
       ((plan.isCollection ? collected : score) / plan.target).clamp(0.0, 1.0);
 
@@ -213,9 +390,7 @@ class MatchEngine {
         'score': score,
         'collected': collected,
         'nextId': nextId,
-        'board': board
-            .map((r) => r.map((c) => c?.toJson()).toList())
-            .toList(),
+        'board': board.map((r) => r.map((c) => c?.toJson()).toList()).toList(),
       };
 
   factory MatchEngine.fromJson(Map<String, dynamic> data) {

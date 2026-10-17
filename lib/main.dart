@@ -175,7 +175,8 @@ class _SugarGardenState extends State<SugarGarden>
     });
     await Future<void>.delayed(const Duration(milliseconds: 315));
     if (!mounted) return;
-    if (g.matches().isEmpty) {
+    final combo = g.specialCombo(a, b);
+    if (g.matches().isEmpty && combo == null) {
       setState(() {
         g.swap(a, b);
         _message = 'Bu hamle eşleşme oluşturmuyor.';
@@ -186,15 +187,16 @@ class _SugarGardenState extends State<SugarGarden>
     }
     g.moves--;
     _fx(strong: true);
-    await _resolve();
+    await _resolve(firstWave: combo, preferred: b);
   }
 
-  Future<void> _resolve({Set<Cell>? special}) async {
+  Future<void> _resolve({MatchWave? firstWave, Cell? preferred}) async {
     final g = _game;
     if (g == null) return;
     var chain = 1;
-    var matched = special ?? g.matches();
-    while (matched.isNotEmpty && chain <= 25) {
+    var wave = firstWave ?? g.matchWave(preferred: preferred);
+    while (!wave.isEmpty && chain <= 25) {
+      final matched = wave.cells;
       _burstPositions = matched
           .map((cell) => Offset(
               (cell.col + .5) * _boardCell + 5,
@@ -210,13 +212,18 @@ class _SugarGardenState extends State<SugarGarden>
             .whereType<int>()
             .toSet();
         _message = chain > 1 ? 'SÜPER KOMBO x$chain!' :
-            (matched.length >= 5 ? 'MUHTEŞEM!' : 'HARİKA!');
+            wave.spawns.values.contains(SpecialKind.colorBomb)
+                ? 'RENK BOMBASI!'
+                : wave.spawns.isNotEmpty ? 'ÖZEL ŞEKER!'
+                : matched.length >= 10 ? 'MEGA PATLAMA!'
+                : matched.length >= 5 ? 'MUHTEŞEM!' : 'HARİKA!';
         _comboBanner = _message;
       });
       _burstAnimation.forward(from: 0);
       await Future<void>.delayed(const Duration(milliseconds: 280));
       if (!mounted) return;
       g.clear(matched, chain);
+      g.installSpecials(wave.spawns);
       final ids = g.collapse();
       setState(() {
         _vanishing = {};
@@ -228,7 +235,7 @@ class _SugarGardenState extends State<SugarGarden>
         _newborn = {};
         _comboBanner = '';
       });
-      matched = g.matches();
+      wave = g.matchWave();
       chain++;
     }
     if (!g.hasMove()) {
@@ -275,7 +282,7 @@ class _SugarGardenState extends State<SugarGarden>
       g.moves--;
     });
     _fx(strong: true);
-    await _resolve(special: cells);
+    await _resolve(firstWave: g.waveForCells(cells));
   }
 
   void _shuffle() {
@@ -344,6 +351,9 @@ class _SugarGardenState extends State<SugarGarden>
           '• Bir şekeri yatay ya da dikey sürükle.\n\n'
           '• Aynı renkte en az 3 şekeri yan yana getir.\n\n'
           '• Eşleşen şekerler patlar; yukarıdakiler aşağı düşer.\n\n'
+          '• 4 şeker: satır veya sütun patlatan çizgili şeker.\n\n'
+          '• 5 şeker: renk bombası. Renk bombasını komşu bir şekerle değiştir.\n\n'
+          '• İki özel şekeri yan yana değiştirerek büyük patlama yap.\n\n'
           '• Hamlelerin bitmeden hedef puana ulaş veya istenen şekeri topla.\n\n'
           '• Çekiç, satır patlatma ve karıştırma güçlerini kullan.\n\n'
           '• Başarılı olduğunda yeni bölümler açılır.',
@@ -649,7 +659,7 @@ class _SugarGardenState extends State<SugarGarden>
             ),
           ]),
           Padding(padding: const EdgeInsets.only(bottom: 10),
-            child: Text('Üç şekeri eşleştir • Kombolarla puan kazan',
+            child: Text('4 eşleşme: çizgili • 5 eşleşme: renk bombası',
                 style: TextStyle(fontSize: compact ? 10 : 11,
                     color: const Color(0xFF84478E),
                     fontWeight: FontWeight.w700)),
@@ -786,7 +796,8 @@ class _SugarGardenState extends State<SugarGarden>
   Widget _candyOnBoard(Candy candy, int row, double cell) {
     final vanishing = _vanishing.contains(candy.id);
     final newborn = _newborn.contains(candy.id);
-    final art = Center(child: CandyPiece(type: candy.type, size: cell * .94));
+    final art = Center(child: CandyPiece(type: candy.type,
+      special: candy.special, size: cell * .94));
     return AnimatedOpacity(
       duration: const Duration(milliseconds: 240),
       opacity: vanishing ? 0 : 1,

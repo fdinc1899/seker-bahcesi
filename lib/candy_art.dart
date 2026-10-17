@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'game_engine.dart';
 
 const candyPalette = <Color>[
   Color(0xFF20BCFF), // blue drop
@@ -11,20 +12,23 @@ const candyPalette = <Color>[
 ];
 
 class CandyPiece extends StatelessWidget {
-  const CandyPiece({super.key, required this.type, required this.size});
+  const CandyPiece({super.key, required this.type, required this.size,
+    this.special = SpecialKind.none});
   final int type;
   final double size;
+  final SpecialKind special;
 
   @override
   Widget build(BuildContext context) => CustomPaint(
         size: Size.square(size),
-        painter: CandyPainter(type),
+        painter: CandyPainter(type, special),
       );
 }
 
 class CandyPainter extends CustomPainter {
-  CandyPainter(this.type);
+  CandyPainter(this.type, this.special);
   final int type;
+  final SpecialKind special;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -50,6 +54,11 @@ class CandyPainter extends CustomPainter {
       ..color = dark.withValues(alpha: .66)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
+    if (special == SpecialKind.colorBomb) {
+      _drawColorBomb(canvas);
+      canvas.restore();
+      return;
+    }
     switch (type) {
       case 0:
         final rect = Rect.fromCircle(center: const Offset(50, 47), radius: 37);
@@ -140,6 +149,29 @@ class CandyPainter extends CustomPainter {
               Paint()..color = const Color(0x8AFFFFFF));
         }
     }
+    if (special == SpecialKind.horizontal ||
+        special == SpecialKind.vertical) {
+      final horizontal = special == SpecialKind.horizontal;
+      // A bright lightning band makes power candies recognizable while moving.
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          horizontal ? const Rect.fromLTWH(14, 40, 72, 17)
+              : const Rect.fromLTWH(41, 11, 18, 74),
+          const Radius.circular(8),
+        ),
+        Paint()..color = const Color(0xE6FFFFFF),
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          horizontal ? const Rect.fromLTWH(16, 45, 68, 8)
+              : const Rect.fromLTWH(46, 13, 8, 70),
+          const Radius.circular(5),
+        ),
+        Paint()..color = const Color(0xFFFCD055),
+      );
+      canvas.drawCircle(const Offset(50, 49), 8,
+          Paint()..color = const Color(0xFFFC68DC));
+    }
     // Tiny facets create a candy-glass shine even at small 8x8 tile sizes.
     final shine = Paint()
       ..color = Colors.white.withValues(alpha: .82)
@@ -155,8 +187,38 @@ class CandyPainter extends CustomPainter {
     canvas.restore();
   }
 
+  void _drawColorBomb(Canvas canvas) {
+    const center = Offset(50, 45);
+    final ball = Rect.fromCircle(center: center, radius: 37);
+    canvas.drawCircle(const Offset(52, 83), 30,
+      Paint()..color = const Color(0x663F1164)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8));
+    canvas.drawCircle(center, 37, Paint()
+      ..shader = const RadialGradient(center: Alignment(-.4, -.55),
+        radius: 1.2, colors: [Color(0xFF795779), Color(0xFF422146),
+          Color(0xFF24122E), Color(0xFF08060C)])
+        .createShader(ball));
+    canvas.drawCircle(center, 37, Paint()
+      ..color = const Color(0xFFD89CFF)..style = PaintingStyle.stroke
+      ..strokeWidth = 2.4);
+    for (var i = 0; i < 27; i++) {
+      final angle = i * 2.39996;
+      final radial = math.sqrt((i + .5) / 27) * 29;
+      final pt = Offset(center.dx + math.cos(angle) * radial,
+          center.dy + math.sin(angle) * radial);
+      canvas.drawCircle(pt, i.isEven ? 4.3 : 3.5,
+        Paint()..color = candyPalette[i % candyPalette.length]);
+      canvas.drawCircle(pt.translate(-1.2, -1.3), 1.35,
+        Paint()..color = Colors.white.withValues(alpha: .83));
+    }
+    canvas.drawOval(const Rect.fromLTWH(26, 14, 33, 11),
+      Paint()..color = const Color(0x9AFFFFFF));
+    canvas.drawCircle(const Offset(78, 16), 4,
+      Paint()..color = const Color(0xFFF8F4FF));
+  }
+
   @override
-  bool shouldRepaint(covariant CandyPainter old) => old.type != type;
+  bool shouldRepaint(covariant CandyPainter old) => old.type != type || old.special != special;
 }
 
 class SceneryPainter extends CustomPainter {
