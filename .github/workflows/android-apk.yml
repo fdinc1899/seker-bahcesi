@@ -1,0 +1,39 @@
+name: Android APK oluştur
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Projeyi indir
+        uses: actions/checkout@v4
+      - name: Java 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Android proje dosyalarını oluştur
+        run: flutter create --platforms=android --project-name seker_bahcesi .
+      - name: Paketleri indir
+        run: flutter pub get
+      - name: Oyun simgesini yükle
+        run: dart run flutter_launcher_icons
+      - name: Birim testlerini çalıştır
+        run: flutter test
+      - name: Test APK üret
+        run: flutter build apk --debug
+      - name: APK indirilebilir dosya olarak yayınla
+        uses: actions/upload-artifact@v4
+        with:
+          name: seker-bahcesi-test-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 30
