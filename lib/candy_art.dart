@@ -348,9 +348,8 @@ class SceneryPainter extends CustomPainter {
   bool shouldRepaint(covariant SceneryPainter old) => false;
 }
 
-/// V3 effect: screen flash, dual shockwaves, radial glow, glossy fragments,
-/// colored comet tails, little diamond stars and a soft secondary halo.
-/// Uses the SAME constructor as V2; main.dart and game logic do not change.
+/// V4: high-contrast layered effects. The signature is unchanged, so
+/// saved games, the engine and its call sites remain compatible.
 class SparklePainter extends CustomPainter {
   SparklePainter({
     required this.progress,
@@ -365,117 +364,116 @@ class SparklePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final p = progress.clamp(0.0, 1.0).toDouble();
-    if (centers.isEmpty || p >= 1 || size.isEmpty) return;
-    final fade = math.pow(1 - p, 1.35).toDouble();
-    final burst = Curves.easeOutCubic.transform(p);
-    final intensity = centers.length >= 7 ? 1.15 : 1.0;
-    final flash = (1 - p * 7).clamp(0.0, 1.0).toDouble();
-    if (flash > 0) {
-      canvas.drawRect(
-        Offset.zero & size,
-        Paint()..color = Colors.white.withValues(alpha: .18 * flash),
-      );
+    if (centers.isEmpty || size.isEmpty || p >= 1) return;
+
+    final ease = Curves.easeOutCubic.transform(p);
+    final fade = math.pow(1 - p, 1.20).toDouble();
+    final initialFlash = (1 - p * 7).clamp(0.0, 1.0).toDouble();
+    final centerCount = math.min(12, centers.length);
+
+    // Short, bright board flash: visible even when candies are small.
+    if (initialFlash > 0) {
+      canvas.drawRect(Offset.zero & size,
+          Paint()..color = const Color(0xFFFFFFFF)
+              .withValues(alpha: .25 * initialFlash));
     }
 
-    // Cap the particle count for stable frame-rate in large cascades.
-    final count = math.min(14, centers.length);
-    for (var j = 0; j < count; j++) {
-      final index = j * centers.length ~/ count;
+    if (centers.length >= 4) {
+      var total = Offset.zero;
+      for (final cell in centers) {
+        total += cell;
+      }
+      final middle = total / centers.length.toDouble();
+      final halo = (1 - p * 1.2).clamp(0.0, 1.0).toDouble();
+      if (halo > 0) {
+        final maxRadius = size.shortestSide * .54;
+        final radius = 18 + maxRadius * ease;
+        canvas.drawCircle(middle, radius, Paint()
+          ..color = const Color(0xFFFFD76A)
+              .withValues(alpha: .55 * halo)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 7 * halo + 1);
+        canvas.drawCircle(middle, radius * .91, Paint()
+          ..color = Colors.white.withValues(alpha: .48 * halo)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.4 * halo + .5);
+      }
+    }
+
+    // At most 12 sources and 14 fragments per source. Stable for big cascades.
+    for (var j = 0; j < centerCount; j++) {
+      final index = j * centers.length ~/ centerCount;
       final center = centers[index];
-      final base = colors.isEmpty ? Colors.white : colors[index % colors.length];
-      final glowRadius = 24.0 + 22 * burst;
-      final glow = (1 - p * 1.55).clamp(0.0, 1.0).toDouble();
+      final base = colors.isEmpty ? const Color(0xFFFF6EC7)
+          : colors[index % colors.length];
+      final early = (1 - p * 1.95).clamp(0.0, 1.0).toDouble();
+      final glowRadius = 24.0 + 36.0 * ease;
 
-      if (glow > 0) {
-        canvas.drawCircle(
-          center,
-          glowRadius,
-          Paint()
-            ..shader = RadialGradient(colors: [
-              Colors.white.withValues(alpha: .75 * glow),
-              base.withValues(alpha: .46 * glow),
+      if (early > 0) {
+        canvas.drawCircle(center, glowRadius,
+          Paint()..shader = RadialGradient(
+            colors: [
+              Colors.white.withValues(alpha: .90 * early),
+              base.withValues(alpha: .73 * early),
               base.withValues(alpha: 0),
-            ], stops: const [0, .3, 1]).createShader(
-                Rect.fromCircle(center: center, radius: glowRadius)),
-        );
+            ],
+            stops: const [0, .23, 1],
+          ).createShader(Rect.fromCircle(
+              center: center, radius: glowRadius)));
       }
 
-      // Expanding two-tone rings, slightly delayed for a 'double pop'.
-      for (var ringIndex = 0; ringIndex < 2; ringIndex++) {
-        final q = ((p - ringIndex * .095) / (1 - ringIndex * .095))
-            .clamp(0.0, 1.0).toDouble();
-        if (p < ringIndex * .095) continue;
-        final f = (1 - q) * fade;
-        canvas.drawCircle(
-          center,
-          5 + Curves.easeOutCubic.transform(q) * (41 + 9 * ringIndex) * intensity,
-          Paint()
-            ..color = (ringIndex == 0 ? Colors.white : base)
-                .withValues(alpha: (.95 * f).clamp(0.0, 1.0))
-            ..strokeWidth = 4.8 * f + .5
-            ..style = PaintingStyle.stroke,
-        );
+      for (var ring = 0; ring < 3; ring++) {
+        final delay = ring * .095;
+        if (p < delay) continue;
+        final q = ((p - delay) / (1 - delay)).clamp(0.0, 1.0).toDouble();
+        final ringFade = math.pow(1 - q, 1.1).toDouble();
+        final ringRadius = 8 + Curves.easeOutCubic.transform(q) *
+            (52 + ring * 13);
+        canvas.drawCircle(center, ringRadius, Paint()
+          ..color = (ring == 1 ? base :
+                  ring == 2 ? const Color(0xFFFFE180) : Colors.white)
+              .withValues(alpha: (.91 * ringFade).clamp(0.0, 1.0))
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 5.8 * ringFade + .6);
       }
 
-      // 10 outward-flying shards per blast. Angle and speed are deterministic.
-      for (var i = 0; i < 10; i++) {
-        final angle = (i * math.pi / 5) + j * .67;
-        final speed = 30.0 + (i % 4) * 11.0;
-        final distance = 7.0 + burst * speed * intensity;
+      // Deterministic multi-colour flying shards; no random frame flicker.
+      for (var i = 0; i < 14; i++) {
+        final angle = i * (math.pi * 2 / 14) + index * .49;
         final dx = math.cos(angle);
         final dy = math.sin(angle);
-        final head = Offset(
-          center.dx + dx * distance,
-          center.dy + dy * distance + p * p * 13,
-        );
-        final radius = (5.5 * fade).clamp(.15, 5.5).toDouble();
-        final color = i % 3 == 0
-            ? Colors.white
+        final distance = 6 + ease * (36 + (i % 5) * 10);
+        final head = Offset(center.dx + dx * distance,
+            center.dy + dy * distance + p * p * 20);
+        final radius = (6.1 * fade).clamp(.1, 6.1).toDouble();
+        final shade = i % 4 == 0 ? Colors.white
+            : i % 4 == 1 ? const Color(0xFFFFF2A5)
             : candyPalette[(index + i) % candyPalette.length];
-        final tail = Offset(head.dx - dx * (12 * fade + 2),
-            head.dy - dy * (12 * fade + 2));
+        final tail = head.translate(-dx * (20 * fade + 2),
+            -dy * (20 * fade + 2));
 
-        canvas.drawLine(
-          tail, head,
-          Paint()
-            ..color = color.withValues(alpha: (.8 * fade).clamp(0.0, 1.0))
-            ..strokeWidth = (3.8 * fade).clamp(.15, 3.8).toDouble()
-            ..strokeCap = StrokeCap.round,
-        );
-        canvas.drawCircle(head, radius,
-            Paint()..color = color.withValues(alpha: (.98 * fade).clamp(0.0, 1.0)));
-        canvas.drawCircle(head.translate(-radius * .22, -radius * .28),
-            radius * .31,
-            Paint()..color = Colors.white.withValues(alpha: fade));
-
+        canvas.drawLine(tail, head, Paint()
+          ..color = shade.withValues(alpha: .90 * fade)
+          ..strokeWidth = 4.5 * fade + .15
+          ..strokeCap = StrokeCap.round);
+        canvas.drawCircle(head, radius, Paint()
+          ..color = shade.withValues(alpha: .95 * fade));
         if (i.isEven) {
-          final r = radius * 2.2;
-          final diamond = Path()
+          final r = radius * 1.85;
+          canvas.drawPath(Path()
             ..moveTo(head.dx, head.dy - r)
-            ..lineTo(head.dx + r * .36, head.dy)
+            ..lineTo(head.dx + r * .43, head.dy)
             ..lineTo(head.dx, head.dy + r)
-            ..lineTo(head.dx - r * .36, head.dy)
-            ..close();
-          canvas.drawPath(diamond,
-              Paint()..color = Colors.white.withValues(alpha: (.74 * fade).clamp(0.0, 1.0)));
+            ..lineTo(head.dx - r * .43, head.dy)
+            ..close(), Paint()
+              ..color = Colors.white.withValues(alpha: .80 * fade));
         }
       }
 
-      // Large matches get a restrained central starburst (no busy text overlap).
-      if (centers.length >= 5 && p < .49) {
-        final f = ((.49 - p) / .49).clamp(0.0, 1.0).toDouble();
-        for (var ray = 0; ray < 6; ray++) {
-          final a = ray * math.pi / 3 + index * .25;
-          final from = Offset(center.dx + math.cos(a) * 7,
-              center.dy + math.sin(a) * 7);
-          final to = Offset(center.dx + math.cos(a) * (20 + 17 * burst),
-              center.dy + math.sin(a) * (20 + 17 * burst));
-          canvas.drawLine(from, to,
-              Paint()
-                ..color = Colors.white.withValues(alpha: .75 * f)
-                ..strokeWidth = 2.4 * f
-                ..strokeCap = StrokeCap.round);
-        }
+      final centerFlash = (1 - p * 4).clamp(0.0, 1.0).toDouble();
+      if (centerFlash > 0) {
+        canvas.drawCircle(center, 10 + 12 * ease,
+          Paint()..color = Colors.white.withValues(alpha: .86 * centerFlash));
       }
     }
   }

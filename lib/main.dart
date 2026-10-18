@@ -63,7 +63,7 @@ class _SugarGardenState extends State<SugarGarden>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _burstAnimation = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 820));
+        vsync: this, duration: const Duration(milliseconds: 950));
     _load();
   }
 
@@ -268,7 +268,7 @@ class _SugarGardenState extends State<SugarGarden>
           : wave.spawns.isNotEmpty || matched.length >= 7
               ? CandySound.special : CandySound.pop);
       _burstAnimation.forward(from: 0);
-      await Future<void>.delayed(const Duration(milliseconds: 280));
+      await Future<void>.delayed(const Duration(milliseconds: 390));
       if (!mounted) return;
       final chocolateBefore = g.countObstacle(ObstacleKind.chocolate);
       final damaged = g.damageObstacles(matched);
@@ -288,7 +288,7 @@ class _SugarGardenState extends State<SugarGarden>
         _vanishing = {};
         _newborn = ids.toSet();
       });
-      await Future<void>.delayed(const Duration(milliseconds: 450));
+      await Future<void>.delayed(const Duration(milliseconds: 485));
       if (!mounted) return;
       setState(() {
         _newborn = {};
@@ -752,7 +752,7 @@ class _SugarGardenState extends State<SugarGarden>
               const SizedBox(width: 10),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                Text('BÖLÜM ${g.level}', style: const TextStyle(
+                Text('BÖLÜM ${g.level}  •  V4', style: const TextStyle(
                     fontSize: 12, fontWeight: FontWeight.w900,
                     letterSpacing: 1.6, color: Color(0xFF77328B))),
                 Text(g.plan.name, maxLines: 1,
@@ -894,9 +894,9 @@ class _SugarGardenState extends State<SugarGarden>
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft, end: Alignment.bottomRight,
-          colors: [Color(0xFFFAE79E), Color(0xFFFFD46B), Color(0xFFFFA1C9)]),
+          colors: [Color(0xFFFFD778), Color(0xFFFF6FAE), Color(0xFFB458F0)]),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFFFE9A5), width: 6),
+        border: Border.all(color: const Color(0xFFFFF1C7), width: 6),
         boxShadow: const [
           BoxShadow(color: Color(0x994D167A), blurRadius: 22, offset: Offset(0, 12)),
           BoxShadow(color: Color(0xAAFFFFFF), blurRadius: 6,
@@ -905,20 +905,25 @@ class _SugarGardenState extends State<SugarGarden>
       ),
       child: ClipRRect(borderRadius: BorderRadius.circular(15),
         child: Stack(children: [
-          const Positioned.fill(child: ColoredBox(color: Color(0xFF6530A1))),
+          const Positioned.fill(child: DecoratedBox(
+            decoration: BoxDecoration(gradient: RadialGradient(
+              center: Alignment(-.55, -.8), radius: 1.5,
+              colors: [Color(0xFF9158DC), Color(0xFF4F237E), Color(0xFF2E175B)],
+            )),
+          )),
           ...[for (var r = 0; r < gridSize; r++)
             for (var c = 0; c < gridSize; c++)
               Positioned(left: inset + c * cell, top: inset + r * cell,
                 width: cell, height: cell,
                 child: Container(
-                  margin: const EdgeInsets.all(.7),
+                  margin: const EdgeInsets.all(1.1),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: (r + c).isEven
-                        ? const [Color(0xFFCD9EF5), Color(0xFF9F5ACF)]
-                        : const [Color(0xFFB87CE5), Color(0xFF8850BB)],
+                        ? const [Color(0xFFA765D8), Color(0xFF7343B2)]
+                        : const [Color(0xFF9354CA), Color(0xFF6831A8)],
                     ),
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(color: const Color(0x44EAD4FF), width: .8),
@@ -977,23 +982,48 @@ class _SugarGardenState extends State<SugarGarden>
               animation: _burstAnimation,
               builder: (context, _) {
                 final p = _burstAnimation.value;
-                final visibility = (1 - ((p - .42) / .58)).clamp(0.0, 1.0);
-                final size = .75 + Curves.elasticOut.transform(
-                    (p * 2.5).clamp(0.0, 1.0)) * .32;
+                final visibility =
+                    (1 - ((p - .47) / .53)).clamp(0.0, 1.0).toDouble();
+                final pop = Curves.elasticOut.transform(
+                    (p * 3.1).clamp(0.0, 1.0).toDouble());
+                final scale = .57 + pop * .54;
                 return Center(child: Opacity(
                   opacity: _comboBanner.isEmpty ? 0 : visibility,
-                  child: Transform.scale(scale: size,
-                    child: Text(_comboBanner,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: side * .079, fontWeight: FontWeight.w900,
-                        letterSpacing: -.4, color: const Color(0xFFFFF2A8),
-                        shadows: const [
-                          Shadow(color: Color(0xFFFF3F9A), blurRadius: 4,
-                            offset: Offset(2, 3)),
-                          Shadow(color: Color(0xFF742192), blurRadius: 13,
-                            offset: Offset(0, 5)),
-                        ],
+                  child: Transform.rotate(
+                    angle: math.sin(p * math.pi * 5) * (1 - p) * .045,
+                    child: Transform.scale(scale: scale,
+                      child: Container(
+                        constraints: BoxConstraints(maxWidth: side * .90),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: side * .042, vertical: 8),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(colors: [
+                            Color(0xFFE8419C), Color(0xFFAD43C9),
+                          ]),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: Colors.white, width: 2.5),
+                          boxShadow: const [
+                            BoxShadow(color: Color(0xB0FFB236), blurRadius: 18,
+                                spreadRadius: 3),
+                            BoxShadow(color: Color(0xAA7325BC), blurRadius: 13,
+                                offset: Offset(0, 6)),
+                          ],
+                        ),
+                        child: Text(_comboBanner,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: side * .066,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: .4,
+                            color: const Color(0xFFFFF9C2),
+                            shadows: const [
+                              Shadow(color: Color(0xFFFF5D52), blurRadius: 6,
+                                  offset: Offset(0, 2)),
+                              Shadow(color: Color(0xFF71217E), blurRadius: 4,
+                                  offset: Offset(0, 3)),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -1063,15 +1093,19 @@ class _SugarGardenState extends State<SugarGarden>
     final vanishing = _vanishing.contains(candy.id);
     final newborn = _newborn.contains(candy.id);
     final art = Center(child: CandyPiece(type: candy.type,
-      special: candy.special, size: cell * .94));
+      special: candy.special, size: cell * .99));
     return AnimatedOpacity(
-      duration: const Duration(milliseconds: 240),
+      duration: const Duration(milliseconds: 350),
       opacity: vanishing ? 0 : 1,
       child: AnimatedScale(
-        duration: const Duration(milliseconds: 240),
-        curve: Curves.easeInBack,
-        scale: vanishing ? .12 : 1,
-        child: newborn
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutBack,
+        scale: vanishing ? 1.28 : 1,
+        child: AnimatedRotation(
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeOut,
+          turns: vanishing ? .09 : 0,
+          child: newborn
             ? TweenAnimationBuilder<double>(
                 key: ValueKey('fall-${candy.id}'),
                 tween: Tween(begin: -(row + 3) * cell, end: 0),
@@ -1082,6 +1116,7 @@ class _SugarGardenState extends State<SugarGarden>
                 child: art,
               )
             : art,
+        ),
       ),
     );
   }
