@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'candy_art.dart';
 import 'game_engine.dart';
+import 'game_audio.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,6 +26,7 @@ class SugarGarden extends StatefulWidget {
 
 class _SugarGardenState extends State<SugarGarden>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+  final GameAudio _audio = GameAudio();
   SharedPreferences? _storage;
   bool _loading = true;
   bool _sound = true;
@@ -55,7 +57,7 @@ class _SugarGardenState extends State<SugarGarden>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _burstAnimation = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 690));
+        vsync: this, duration: const Duration(milliseconds: 820));
     _load();
   }
 
@@ -63,7 +65,10 @@ class _SugarGardenState extends State<SugarGarden>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused) {
+      _audio.pauseMusic();
       _save();
+    } else if (state == AppLifecycleState.resumed) {
+      _audio.resumeMusic();
     }
   }
 
@@ -71,6 +76,7 @@ class _SugarGardenState extends State<SugarGarden>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _burstAnimation.dispose();
+    _audio.dispose();
     super.dispose();
   }
 
@@ -101,6 +107,7 @@ class _SugarGardenState extends State<SugarGarden>
       // A damaged save should not prevent the player from starting a new game.
       _game = null;
     }
+    await _audio.initialize(enabled: _sound);
     if (mounted) setState(() => _loading = false);
   }
 
@@ -122,9 +129,15 @@ class _SugarGardenState extends State<SugarGarden>
     }
   }
 
+  void _toggleSound() {
+    setState(() => _sound = !_sound);
+    _audio.setEnabled(_sound);
+    _save();
+  }
+
   void _fx({bool strong = false}) {
     if (!_sound) return;
-    SystemSound.play(SystemSoundType.click);
+    _audio.play(strong ? CandySound.swipe : CandySound.tap);
     if (strong) {
       HapticFeedback.mediumImpact();
     } else {
@@ -224,6 +237,9 @@ class _SugarGardenState extends State<SugarGarden>
                 : matched.length >= 5 ? 'MUHTEŞEM!' : 'HARİKA!';
         _comboBanner = _message;
       });
+      _audio.play(chain > 1 ? CandySound.combo
+          : wave.spawns.isNotEmpty || matched.length >= 7
+              ? CandySound.special : CandySound.pop);
       _burstAnimation.forward(from: 0);
       await Future<void>.delayed(const Duration(milliseconds: 280));
       if (!mounted) return;
@@ -265,12 +281,14 @@ class _SugarGardenState extends State<SugarGarden>
         _result = true;
         _message = 'BÖLÜM TAMAMLANDI!';
       });
+      _audio.play(CandySound.win);
       _fx(strong: true);
     } else if (g.moves <= 0) {
       setState(() {
         _result = false;
         _message = 'Hamlelerin tükendi!';
       });
+      _audio.play(CandySound.lose);
     }
     if (mounted) setState(() => _busy = false);
     await _save();
@@ -311,7 +329,7 @@ class _SugarGardenState extends State<SugarGarden>
       g.newBoard();
       _message = 'Şekerler yeniden karıştı!';
     });
-    _fx();
+    _audio.play(CandySound.special);
     _save();
   }
 
@@ -435,7 +453,7 @@ class _SugarGardenState extends State<SugarGarden>
                 const Color(0xFFEF8C19)),
             const SizedBox(width: 9),
             _roundIcon(_sound ? Icons.volume_up_rounded : Icons.volume_off_rounded,
-                () { setState(() => _sound = !_sound); _save(); }),
+                _toggleSound),
           ]),
         ),
         const Spacer(),
@@ -581,7 +599,7 @@ class _SugarGardenState extends State<SugarGarden>
               const SizedBox(width: 6),
               _roundIcon(_sound ? Icons.volume_up_rounded :
                   Icons.volume_off_rounded,
-                  () { setState(() => _sound = !_sound); _save(); }),
+                  _toggleSound),
             ]),
           ),
           Container(
@@ -651,7 +669,17 @@ class _SugarGardenState extends State<SugarGarden>
               )),
             ]),
           ),
-          _gameBoard(side),
+          AnimatedBuilder(
+            animation: _burstAnimation,
+            child: _gameBoard(side),
+            builder: (context, child) {
+              final p = _burstAnimation.value;
+              final shake = math.sin(p * math.pi * 22) *
+                  (1 - p) * (p < .48 ? 2.8 : .5);
+              return Transform.translate(
+                offset: Offset(shake, -shake * .36), child: child);
+            },
+          ),
           Column(children: [
             Text(_power == PowerMode.none ? _message :
                     'Patlatmak istediğin şekere dokun!',
@@ -767,7 +795,7 @@ class _SugarGardenState extends State<SugarGarden>
                   child: IgnorePointer(child: _obstacleTile(g.obstacles[r][c])),
                 ),
           ],
-          IgnorePointer(child: AnimatedBuilder(
+          Positioned.fill(child: IgnorePointer(child: AnimatedBuilder(
             animation: _burstAnimation,
             builder: (context, child) => CustomPaint(
               size: Size.square(side),
@@ -777,7 +805,7 @@ class _SugarGardenState extends State<SugarGarden>
                 colors: _burstColors.isEmpty ? [Colors.white] : _burstColors,
               ),
             ),
-          )),
+          ))),
           Positioned.fill(child: IgnorePointer(
             child: AnimatedBuilder(
               animation: _burstAnimation,

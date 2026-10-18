@@ -297,8 +297,8 @@ class SceneryPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter old) => false;
 }
 
-/// Deterministic particle burst with a fading shockwave around each match.
-/// Drawn as an overlay; it never modifies the game board or touch handling.
+/// Distinct match explosion with expanding rings, candy fragments, streaks and
+/// white flashes. Deterministic and rendered on a single canvas for smooth FPS.
 class SparklePainter extends CustomPainter {
   SparklePainter({required this.progress, required this.centers, required this.colors});
   final double progress;
@@ -307,50 +307,67 @@ class SparklePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final fade = (1 - progress).clamp(0.0, 1.0);
-    if (fade <= 0 || centers.isEmpty) return;
-    for (var j = 0; j < centers.length; j++) {
-      final center = centers[j];
-      final color = colors[j % colors.length];
-      final ringRadius = 6 + progress * 31;
-      canvas.drawCircle(center, ringRadius, Paint()
-        ..color = color.withValues(alpha: .7 * fade)
+    final p = progress.clamp(0.0, 1.0);
+    if (centers.isEmpty || p >= 1) return;
+    final fade = (1 - p);
+    final flash = (1 - p * 5).clamp(0.0, 1.0);
+    if (flash > 0) {
+      canvas.drawRect(Offset.zero & size,
+          Paint()..color = Colors.white.withValues(alpha: flash * .14));
+    }
+    // The particle budget is capped so even large chain reactions stay fluid.
+    final visibleCenters = centers.length <= 14
+        ? centers : [for (var i = 0; i < 14; i++) centers[i * centers.length ~/ 14]];
+    for (var j = 0; j < visibleCenters.length; j++) {
+      final center = visibleCenters[j];
+      final base = colors[j % colors.length];
+      final ring = 6 + Curves.easeOutCubic.transform(p) * 46;
+      final ringOpacity = (.92 * fade).clamp(0.0, 1.0);
+      canvas.drawCircle(center, ring, Paint()
+        ..color = Colors.white.withValues(alpha: ringOpacity)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 3.8 * fade);
-      canvas.drawCircle(center, ringRadius * .58, Paint()
-        ..color = Colors.white.withValues(alpha: .58 * fade)
+        ..strokeWidth = 5.3 * fade + .4);
+      canvas.drawCircle(center, ring * .72, Paint()
+        ..color = base.withValues(alpha: .78 * fade)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.4 * fade);
-
-      for (var i = 0; i < 9; i++) {
-        final angle = i * 2 * math.pi / 9 + j * .69;
-        final distance = 9 + progress * (30 + (i % 3) * 7);
-        final tip = Offset(center.dx + math.cos(angle) * distance,
-          center.dy + math.sin(angle) * distance);
-        final radius = (5.2 - progress * 5).clamp(0.0, 5.2);
-        canvas.drawCircle(tip, radius, Paint()
-          ..color = (i.isEven ? Colors.white : color)
-            .withValues(alpha: fade));
-        // Four pointed sparkle, rather than a simple dot.
-        if (i % 3 == 0) {
-          final beam = Path()
-            ..moveTo(tip.dx, tip.dy - radius * 2.2)
-            ..lineTo(tip.dx + radius * .52, tip.dy)
-            ..lineTo(tip.dx, tip.dy + radius * 2.2)
-            ..lineTo(tip.dx - radius * .52, tip.dy)
-            ..close();
-          canvas.drawPath(beam, Paint()
-            ..color = Colors.white.withValues(alpha: fade * .92));
-        }
+        ..strokeWidth = 5.0 * fade + .4);
+      if (p < .44) {
+        final hot = (1 - p / .44).clamp(0.0, 1.0);
+        canvas.drawCircle(center, 9 + p * 37,
+          Paint()..shader = RadialGradient(colors: [
+            Colors.white.withValues(alpha: .95 * hot),
+            base.withValues(alpha: .58 * hot),
+            base.withValues(alpha: 0),
+          ]).createShader(Rect.fromCircle(center: center, radius: 31)));
       }
-      if (progress < .43) {
-        final glow = (1 - progress / .43).clamp(0.0, 1.0);
-        canvas.drawCircle(center, 11 + 16 * progress, Paint()
-          ..shader = RadialGradient(colors: [
-            Colors.white.withValues(alpha: .85 * glow),
-            color.withValues(alpha: .32 * glow),
-            color.withValues(alpha: 0),
-          ]).createShader(Rect.fromCircle(center: center, radius: 30)));
+      for (var i = 0; i < 12; i++) {
+        final angle = i * math.pi / 6 + j * .77;
+        final speed = 31.0 + (i % 4) * 11;
+        final d = 7 + Curves.easeOut.transform(p) * speed;
+        final position = Offset(center.dx + math.cos(angle) * d,
+            center.dy + math.sin(angle) * d + p * p * 13);
+        final radius = (6.4 * fade).clamp(.2, 6.4);
+        final color = i.isEven ? Colors.white :
+            candyPalette[(j + i) % candyPalette.length];
+        canvas.drawCircle(position, radius * .85,
+          Paint()..color = color.withValues(alpha: (.96 * fade).clamp(0.0, 1.0)));
+        // The bright streak travels out with each candy fragment.
+        final tail = Offset(position.dx - math.cos(angle) * (12 * fade),
+          position.dy - math.sin(angle) * (12 * fade));
+        canvas.drawLine(position, tail, Paint()
+          ..color = color.withValues(alpha: .78 * fade)
+          ..strokeWidth = (3.0 * fade).clamp(.2, 3.0)
+          ..strokeCap = StrokeCap.round);
+        if (i % 3 == 0) {
+          final star = Path()
+            ..moveTo(position.dx, position.dy - radius * 2.6)
+            ..lineTo(position.dx + radius * .55, position.dy)
+            ..lineTo(position.dx, position.dy + radius * 2.6)
+            ..lineTo(position.dx - radius * .55, position.dy)
+            ..close();
+          canvas.drawPath(star, Paint()
+            ..color = Colors.white.withValues(alpha: .88 * fade));
+        }
       }
     }
   }

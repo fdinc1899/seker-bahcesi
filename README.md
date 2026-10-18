@@ -1,3 +1,31 @@
+# Şeker Bahçesi V2 – Paket 4 | Gerçek müzik ve patlama sesleri
+
+Bu paket bir önceki V2 Paket 3'ün **tam proje güncellemesidir**. İçinde önceki sürümlerin 60 bölüm, özel şeker, engel ve kayıt motoru korunmuştur.
+
+## Sesler artık gerçekten var
+
+- Oyuna girince otomatik başlayıp tekrar eden **özgün neşeli arka plan müziği** (`assets/audio/seker_bahcesi_muzik.wav`).
+- Kaydırma/tıklama, üçlü patlama, özel şeker, zincirleme kombo, kazanma ve kaybetme için **7 ayrı WAV ses efekti**.
+- Sağ üstteki hoparlör simgesi müzik **ve** efektleri birlikte açar/kapatır; tercihin eskisi gibi `sound` anahtarına kaydedilir.
+- Uygulama arka plandayken müzik durur, geri gelince devam eder.
+- Bu sesler dış bağlantıdan yüklenmez, çevrimdışı da oynar. Sesler bu paket için üretilmiş, telifsiz özgün sentezlerdir.
+
+## Daha görünür patlamalar
+
+Her eşleşmede ışıklı büyüyen halkalar, beyaz parıltı, dışarı saçılan renkli parçacıklar, kısa flaş ve hafif ekran sarsıntısı gösterilir. Zincirleme kombolar farklı ses çıkarır; mevcut şeker akış animasyonu korunmuştur.
+
+## APK
+
+Github Actions → en yeni yeşil derleme → Artifacts → `seker-bahcesi-v2-paket4-ses-patlama-apk`.
+
+## Güvenlik
+
+Kelime Çemberi'ne dokunmaz. İlerleme kayıt biçimini değiştirmez. Mevcut APK'yı kaldırmadan önce verilerini yedekle; Android farklı imzalı APK'yı güncelleme olarak kabul etmeyebilir.
+
+## Kurulum
+
+Önce `flutter pub get`, sonra `flutter test`, sonra `flutter build apk --debug`. GitHub Actions bu adımları otomatik yapar.
+
 # Şeker Bahçesi 🍬 — Flutter Match-3 Oyunu (V2 Paket 3)
 
 Android ve iOS için tasarlanan, özgün çizimli Türkçe eşleştirme oyunu. **Candy Crush Saga'nın bir kopyası değildir:** King'e ait isim, grafik veya sesler bu projede kullanılmaz.
