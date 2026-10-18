@@ -7,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'candy_art.dart';
 import 'game_engine.dart';
 import 'game_audio.dart';
+import 'level_result.dart';
+import 'reward_rules.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,6 +41,7 @@ class _SugarGardenState extends State<SugarGarden>
   int _shuffles = 3;
   bool _busy = false;
   bool? _result;
+  bool _threeStarPrize = false;
   PowerMode _power = PowerMode.none;
   Cell? _selected;
   Cell? _dragStart;
@@ -145,6 +148,14 @@ class _SugarGardenState extends State<SugarGarden>
     }
   }
 
+  int _continueLevel() {
+    final current = _game;
+    if (current != null && !current.won && current.moves > 0) {
+      return current.level;
+    }
+    return _unlocked;
+  }
+
   void _openGame(int level) {
     if (level > _unlocked || level < 1 || level > 60) return;
     setState(() {
@@ -154,6 +165,7 @@ class _SugarGardenState extends State<SugarGarden>
       }
       _page = ViewPage.play;
       _result = null;
+      _threeStarPrize = false;
       _busy = false;
       _selected = null;
       _power = PowerMode.none;
@@ -171,6 +183,7 @@ class _SugarGardenState extends State<SugarGarden>
     setState(() {
       _page = ViewPage.home;
       _result = null;
+      _threeStarPrize = false;
       _power = PowerMode.none;
     });
     _save();
@@ -275,9 +288,15 @@ class _SugarGardenState extends State<SugarGarden>
       setState(() => _message = 'Yeni şekerler karıştırıldı!');
     }
     if (g.won) {
+      // The existing best-stars save key prevents repeat reward farming.
+      final previousBest = _stars[g.level] ?? 0;
+      final earned = g.stars;
+      final prize = prizeForLevel(previousBest: previousBest, stars: earned);
       _unlocked = math.max(_unlocked, math.min(60, g.level + 1));
-      _stars[g.level] = math.max(_stars[g.level] ?? 0, g.stars);
+      _stars[g.level] = math.max(previousBest, earned);
+      if (prize.awarded) _shuffles += prize.bonusShuffles;
       setState(() {
+        _threeStarPrize = prize.awarded;
         _result = true;
         _message = 'BÖLÜM TAMAMLANDI!';
       });
@@ -485,7 +504,7 @@ class _SugarGardenState extends State<SugarGarden>
             style: TextStyle(color: Color(0xFF784184), fontSize: 12,
                 fontWeight: FontWeight.w900, letterSpacing: 2)),
         const Spacer(),
-        _bigButton('▶  OYNA', () => _openGame(_game?.level ?? _unlocked),
+        _bigButton('▶  OYNA', () => _openGame(_continueLevel()),
             colorA: const Color(0xFFFFB83C),
             colorB: const Color(0xFFFF653D)),
         const SizedBox(height: 14),
@@ -971,65 +990,26 @@ class _SugarGardenState extends State<SugarGarden>
     );
   }
 
-  Widget _resultOverlay(MatchEngine g) {
-    final win = _result == true;
-    final isLast = g.level == 60;
-    return Container(
-      color: const Color(0xBB3D1D62),
-      child: Center(child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 27),
-        padding: const EdgeInsets.fromLTRB(18, 23, 18, 24),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFFFFFFFF), Color(0xFFFFE2F4)]),
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: const Color(0xFFFFD46A), width: 5),
-          boxShadow: const [BoxShadow(color: Color(0x994B145E),
-              blurRadius: 20, offset: Offset(0, 10))],
-        ),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text(win ? 'TEBRİKLER!' : 'TEKRAR DENE',
-              textAlign: TextAlign.center,
-              style: _titleStyle(34, win ? const Color(0xFFE43E90) :
-                  const Color(0xFF9257AE))),
-          const SizedBox(height: 8),
-          Row(mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(3, (i) => Icon(Icons.star_rounded,
-                color: win && i < g.stars
-                    ? const Color(0xFFFFB51C)
-                    : const Color(0xFFD5C8DA), size: 66)),
-          ),
-          const SizedBox(height: 4),
-          Text(win ? '${g.level}. bölümü tamamladın!' :
-              'Hedefe ulaşmak için yeniden oyna!',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFF884595),
-                  fontSize: 16, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 10),
-          Text('${g.score} PUAN', style: _titleStyle(
-              26, const Color(0xFFFF9632))),
-          const SizedBox(height: 22),
-          _bigButton(win ? (isLast ? 'HARİTA' : 'SONRAKİ BÖLÜM')
-              : 'YENİDEN DENE', () {
-            if (win && isLast) {
-              setState(() { _result = null; _page = ViewPage.map; });
-            } else {
-              _openGame(win ? g.level + 1 : g.level);
-            }
-          }, small: true),
-          const SizedBox(height: 12),
-          TextButton(onPressed: () => setState(() {
-              _result = null; _page = ViewPage.map;
-            }),
-            child: const Text('Bölüm haritasına dön',
-                style: TextStyle(color: Color(0xFF9954AD),
-                    fontWeight: FontWeight.w800)),
-          ),
-        ]),
-      )),
-    );
-  }
+  Widget _resultOverlay(MatchEngine g) => LevelResultOverlay(
+    key: ValueKey('result-${g.level}-${_result == true}'),
+    won: _result == true,
+    level: g.level,
+    score: g.score,
+    stars: g.stars,
+    lastLevel: g.level >= 60,
+    bonusShuffle: _threeStarPrize,
+    onPrimary: () {
+      if (_result == true && g.level >= 60) {
+        setState(() { _result = null; _page = ViewPage.map; });
+      } else {
+        _openGame(_result == true ? g.level + 1 : g.level);
+      }
+    },
+    onMap: () => setState(() {
+      _result = null;
+      _page = ViewPage.map;
+    }),
+  );
 
   TextStyle _titleStyle(double size, Color color) => TextStyle(
     fontSize: size, height: .98, fontWeight: FontWeight.w900,
