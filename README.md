@@ -1,21 +1,28 @@
-# Şeker Bahçesi 🍬 – V2 Paket 6: Günlük Hediye ve Görevler
+# Şeker Bahçesi 🍬 – V2 Paket 7: Kesintisiz Müzik
 
-Bu paket **V2 Paket 5'in üzerine kurulu tam Flutter kaynak projesidir**. Önceki 60 bölüm, ses ve müzik, patlama animasyonları, 4-5 şeker özel yetenekleri, buz/çikolata/kilit, bölüm sonuç ekranı ve +1 Karıştır üç yıldız ödülü korunur.
+Bu paket **V2 Paket 6'nın üzerine kurulu tam Flutter kaynak projesidir**. Mevcut 60 bölüm, özel şekerler, buz/çikolata/kilit, günlük giriş ödülü ve görevler, kutlama animasyonları ve yerel kayıtlar korunur.
 
-## Yenilikler
+## Düzeltilen sorun
 
-- Ana ekranın sol üstünde **hediye simgesi**. Açınca günlük hediye ve üç görev gösterilir.
-- **Giriş hediyesi:** yerel takvime göre günde en fazla bir defa. Her gün değişen Çekiç / Satır / Karıştır ödülü; 7 günlük tekrarlanan ödül döngüsü. Arka arkaya günlerde seri yükselir.
-- **Günlük görevler:** 5 geçerli eşleşme, 2 özel şeker oluşturma, 1 bölüm kazanma. Her biri tamamlanınca yalnızca bir kere ek güçlendirici alınır.
-- Görev ilerlemesi ve ödül alma durumu `dailyProgressV2` anahtarında kaydedilir. Gün değişince görev sayaçları sıfırlanır; önceki `stars`, `unlocked`, `session`, `hammers`, `lineBlasts`, `shuffles` ve `sound` anahtarları aynen korunur.
-- Tamamlanmış görevlerde ödülü **ÖDÜLÜ AL** tuşuna basarak alırsın.
+Önceki sürümde her ses oynatıcısı `audioplayers` varsayılanı olan **AndroidAudioFocus.gain** ile çalışıyordu. Patlama, dokunma ya da kombo sesi başladığında ikinci oynatıcı müzikten odak alarak arka plan müziğini durdurabiliyordu.
 
-## GitHub / test
+- Arka plan müziği tek ve bağımsız döngüsel oynatıcıda (`musicContext`, `AndroidAudioFocus.gain`) çalar.
+- **Kısa efektler** (`effectContext`, `AndroidAudioFocus.none`) oyun müziğinin odağını istemez; `sonification` türü ve düşük gecikmeli oynatma kullanır.
+- Beş efekt oynatıcısı farklı seslerin üst üste gelmesini sağlar. Her oynatıcı kendi ses komutlarını sıraya alır; hızlı eşleşmelerde yerel ses çakışması önlenir.
+- iOS için hem efekt hem müzik aynı `mixWithOthers` ses oturumunu kullanır.
+- Bir cihazda efekt odak yapılandırması başarısız olursa efekt devreye girmez; **müziği kesen varsayılan odak ayarına geri dönmez**.
+- Ekran açıkken müzik sürer. Kullanıcı sesi kapattığında veya uygulama arka plana geçtiğinde müzik duraklar; uygulama tekrar öne alınınca kaldığı yerden devam eder.
 
-`main` dalına yükleme GitHub Actions üzerinden `flutter pub get`, `flutter test` ve `flutter build apk --debug` çalıştırır. Başarılı olunca `seker-bahcesi-v2-paket6-gunluk-odul-apk` adlı indirilebilir artifact oluşur. **Bu ortamda Flutter SDK olmadığından testlerin sonuçları GitHub'da doğrulanmalıdır.**
+## Kayıt uyumluluğu
 
-## Önemli
+`shared_preferences` anahtarları (`unlocked`, `stars`, `session`, `hammers`, `lineBlasts`, `shuffles`, `sound`, `dailyProgressV2`) ve oyun motorunun kayıt formatı **değiştirilmedi**. Eski APK'yı silmeyin; aynı uygulama kimliği ve APK imzasıyla mevcut uygulamanın üzerine yükleyin.
 
-- Bu bir çevrimdışı prototip; ödüller cihazın yerel tarihine göre ilerler. Saat değişikliğiyle oynanması tamamen engellenmiş değildir; sunucuya bağlı güvenli ekonomi sisteminin alternatifi değildir.
-- Var olan APK'yı silmeden yeni sürümü güncelleyin; telefonun yerel kayıtlarının korunması için aynı imza ve paket adı gerekir.
-- Eski GitHub paketlerini ayrı ayrı yüklemek zorunda değilsiniz: bu ZIP tam projeyi içerir.
+## Doğrulama
+
+GitHub Actions sırasıyla `flutter pub get`, `flutter test`, `flutter build apk --debug` çalıştırır. Yeni test `test/audio_focus_test.dart` ile ses odağı yapılandırmasını kontrol eder. Bu ortamda Flutter SDK bulunmadığı için gerçek APK derleme ve Android'de ses karışımı **henüz doğrulanmadı**.
+
+**Telefonda test:** Oyun sesi açıkken bir bölüme girin, ardışık 15-20 eşleşme yapın; normal patlama, çizgili şeker ve kombo sırasında arka plan müziği devam etmeli. Hoparlör simgesinden sesi kapatıp tekrar açın; oyuna geri dönün ve müziğin sürdüğünü dinleyin. Sistem çağrısı veya bildirimler Android'in kuralları gereği ayrıca sesi duraklatabilir.
+
+## Not
+
+GitHub'ın `Actions` sekmesindeki başarılı iş akışından `seker-bahcesi-v2-paket7-ses-kesilmesi-duzeltme-apk` artifact dosyasını indirin. ZIP'i açınca `app-debug.apk` bulunur. İlk yayın değildir; imzalı sürüm gerektiren Play Store dağıtımından ayrıdır.
