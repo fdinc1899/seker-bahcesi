@@ -53,9 +53,24 @@ class LevelPlan {
   final int level;
   bool get isCollection => level % 3 == 2;
   int get focusType => (level ~/ 3 + 3) % candyTypes;
-  int get target => isCollection ? 10 + (level ~/ 3) * 2 : 2200 + level * 190;
-  int get totalMoves => max(16, 25 - (level - 1) ~/ 7);
+  // Preserve the original targets for all 60 existing levels and old saves.
+  // New worlds use achievable targets rather than scaling without limit.
+  int get target {
+    if (level <= 60) {
+      return isCollection ? 10 + (level ~/ 3) * 2 : 2200 + level * 190;
+    }
+    return isCollection ? 24 + (level - 61) ~/ 6 : 9000 + (level - 61) * 55;
+  }
+  int get totalMoves => level <= 60
+      ? max(16, 25 - (level - 1) ~/ 7)
+      : max(22, 24 - (level - 61) ~/ 25);
   String get name {
+    if (level > 60) {
+      const newWorlds = <String>[
+        'Jöle Adaları', 'Kristal Krallığı', 'Altın Şeker Sarayı',
+      ];
+      return newWorlds[((level - 61) ~/ 20).clamp(0, 2).toInt()];
+    }
     const names = [
       'Pamuk Şeker Tepesi', 'Çilek Ormanı', 'Vanilya Vadisi',
       'Renkli Şekerler', 'Bal Köpüğü Yolu', 'Limon Bahçesi',

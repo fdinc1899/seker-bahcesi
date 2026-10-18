@@ -8,6 +8,7 @@ import 'candy_art.dart';
 import 'game_engine.dart';
 import 'game_audio.dart';
 import 'v5_fx.dart';
+import 'v6_progress.dart';
 import 'level_result.dart';
 import 'reward_rules.dart';
 import 'daily_rewards.dart';
@@ -46,6 +47,7 @@ class _SugarGardenState extends State<SugarGarden>
   bool? _result;
   bool _threeStarPrize = false;
   DailyProgress _daily = DailyProgress.fresh(DateTime.now());
+  V6Progress _v6 = V6Progress();
   PowerMode _power = PowerMode.none;
   Cell? _selected;
   Cell? _dragStart;
@@ -109,12 +111,22 @@ class _SugarGardenState extends State<SugarGarden>
       _hammers = prefs.getInt('hammers') ?? 3;
       _lineBlasts = prefs.getInt('lineBlasts') ?? 2;
       _shuffles = prefs.getInt('shuffles') ?? 3;
+      final savedV6 = prefs.getString('v6Progress');
+      if (savedV6 != null) {
+        try {
+          _v6 = V6Progress.fromJson(
+            Map<String, dynamic>.from(jsonDecode(savedV6) as Map));
+        } catch (_) {
+          _v6 = V6Progress();
+        }
+      }
       final progress = prefs.getString('stars');
       if (progress != null) {
         (jsonDecode(progress) as Map<String, dynamic>).forEach((key, value) {
           _stars[int.parse(key)] = (value as num).toInt();
         });
       }
+      _unlocked = v6MigrateUnlocked(_unlocked, _stars);
       final dailyData = prefs.getString('dailyProgressV2');
       if (dailyData != null) {
         _daily = DailyProgress.fromJson(
@@ -149,6 +161,7 @@ class _SugarGardenState extends State<SugarGarden>
     await prefs.setInt('lineBlasts', _lineBlasts);
     await prefs.setInt('shuffles', _shuffles);
     await prefs.setString('dailyProgressV2', jsonEncode(_daily.toJson()));
+    await prefs.setString('v6Progress', jsonEncode(_v6.toJson()));
     final g = _game;
     if (g != null && g.moves > 0 && !g.won) {
       await prefs.setString('session', jsonEncode(g.toJson()));
@@ -182,7 +195,7 @@ class _SugarGardenState extends State<SugarGarden>
   }
 
   void _openGame(int level) {
-    if (level > _unlocked || level < 1 || level > 60) return;
+    if (level > _unlocked || level < 1 || level > v6LevelCount) return;
     setState(() {
       if (_game == null || _game!.level != level ||
           _game!.won || _game!.moves <= 0) {
@@ -335,7 +348,10 @@ class _SugarGardenState extends State<SugarGarden>
       final previousBest = _stars[g.level] ?? 0;
       final earned = g.stars;
       final prize = prizeForLevel(previousBest: previousBest, stars: earned);
-      _unlocked = math.max(_unlocked, math.min(60, g.level + 1));
+      final earnedCoins = v6CoinsForWin(
+          previousBest: previousBest, stars: earned);
+      _v6.coins += earnedCoins;
+      _unlocked = math.max(_unlocked, math.min(v6LevelCount, g.level + 1));
       _stars[g.level] = math.max(previousBest, earned);
       if (prize.awarded) _shuffles += prize.bonusShuffles;
       setState(() {
@@ -346,6 +362,15 @@ class _SugarGardenState extends State<SugarGarden>
       _audio.play(CandySound.win);
       _winAnimation.forward(from: 0);
       _fx(strong: true);
+      if (earnedCoins > 0) {
+        final navContext = _navigatorKey.currentContext;
+        if (navContext != null) {
+          ScaffoldMessenger.of(navContext).showSnackBar(SnackBar(
+            content: Text('Bölüm ödülü: +$earnedCoins 🍬 şeker parası!'),
+            duration: const Duration(seconds: 3),
+          ));
+        }
+      }
     } else if (g.moves <= 0) {
       setState(() {
         _result = false;
@@ -592,6 +617,101 @@ class _SugarGardenState extends State<SugarGarden>
     );
   }
 
+  void _buyBooster(V6Booster booster, VoidCallback refresh) {
+    if (!_v6.purchase(booster)) return;
+    setState(() {
+      switch (booster) {
+        case V6Booster.hammer:
+          _hammers++;
+          break;
+        case V6Booster.line:
+          _lineBlasts++;
+          break;
+        case V6Booster.shuffle:
+          _shuffles++;
+          break;
+      }
+    });
+    refresh();
+    _fx();
+    _save();
+  }
+
+  void _openShop() {
+    final navContext = _navigatorKey.currentContext;
+    if (navContext == null) return;
+    _fx();
+    showModalBottomSheet<void>(
+      context: navContext,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFFFFF5FE),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26))),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, refresh) => SafeArea(child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 25),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text('ŞEKER DÜKKÂNI', style: TextStyle(
+              fontWeight: FontWeight.w900, fontSize: 23,
+              color: Color(0xFF8435A3))),
+            const SizedBox(height: 6),
+            Text('🍬 ${_v6.coins} şeker paran var',
+              key: const ValueKey('v6-coin-balance'),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold,
+                color: Color(0xFF9A428A))),
+            const SizedBox(height: 12),
+            for (final booster in V6Booster.values)
+              Padding(padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Card(color: Colors.white, child: ListTile(
+                  leading: Icon(switch (booster) {
+                    V6Booster.hammer => Icons.auto_fix_high_rounded,
+                    V6Booster.line => Icons.flash_on_rounded,
+                    V6Booster.shuffle => Icons.shuffle_rounded,
+                  }, color: const Color(0xFFC24EC0)),
+                  title: Text(switch (booster) {
+                    V6Booster.hammer => 'Çekiç',
+                    V6Booster.line => 'Satır patlatma',
+                    V6Booster.shuffle => 'Karıştırma',
+                  }, style: const TextStyle(fontWeight: FontWeight.w800)),
+                  subtitle: Text('${v6BoosterPrice(booster)} 🍬'),
+                  trailing: FilledButton(
+                    key: ValueKey('v6-buy-${booster.name}'),
+                    onPressed: _v6.canAfford(booster)
+                        ? () => _buyBooster(booster, () => refresh(() {}))
+                        : null,
+                    child: const Text('AL'),
+                  ),
+                ))),
+            const SizedBox(height: 8),
+            const Text('Şeker paraları bölümleri geçerek kazanılır. '
+              'Gerçek para veya reklam yok.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: Color(0xFF795D86))),
+          ]),
+        )),
+      ),
+    );
+  }
+
+  void _claimWorldChest(int endLevel) {
+    final reward = _v6.claimChest(endLevel, _stars);
+    if (reward == null) return;
+    setState(() {
+      _hammers += reward.hammers;
+      _shuffles += reward.shuffles;
+    });
+    _audio.play(CandySound.win);
+    _save();
+    final navContext = _navigatorKey.currentContext;
+    if (navContext != null) {
+      ScaffoldMessenger.of(navContext).showSnackBar(SnackBar(
+        content: Text('Dünya sandığı açıldı! +${reward.coins} 🍬, '
+          '+${reward.hammers} çekiç, +${reward.shuffles} karıştırma'),
+        duration: const Duration(seconds: 4),
+      ));
+    }
+  }
+
   void _howToPlay() {
     final navContext = _navigatorKey.currentContext;
     if (navContext == null) return;
@@ -615,7 +735,11 @@ class _SugarGardenState extends State<SugarGarden>
           '• Hamlelerin bitmeden hedef puana ulaş veya istenen şekeri topla.\n\n'
           '• Çekiç, satır patlatma ve karıştırma güçlerini kullan.\n\n'
           '• Günlük hediye ve görevler için ana ekrandaki hediye simgesini aç.\n\n'
-          '• Başarılı olduğunda yeni bölümler açılır.',
+          '• Başarılı olduğunda yeni bölümler açılır.\n\n'
+          '• V6: 120 bölüm ve 6 dünya var. İlk 60 bölüm korunur.\n\n'
+          '• İlk defa kazandığın yıldızlar şeker parası kazandırır.\n\n'
+          '• Şeker dükkânından oyun parasıyla güçlendirici al.\n\n'
+          '• Her 20. bölümü bitirince haritadaki dünya sandığını aç.',
           style: TextStyle(height: 1.35, fontSize: 15),
         ),
         actions: [
@@ -674,6 +798,9 @@ class _SugarGardenState extends State<SugarGarden>
             const SizedBox(width: 9),
             Tooltip(message: 'Günlük hediye ve görevler',
               child: _roundIcon(Icons.card_giftcard_rounded, _openDailyRewards)),
+            const SizedBox(width: 8),
+            Tooltip(message: 'Şeker dükkânı',
+              child: _roundIcon(Icons.storefront_rounded, _openShop)),
             const Spacer(),
             _pill('★ ${_stars.values.fold<int>(0, (a, b) => a + b)}',
                 const Color(0xFFEF8C19)),
@@ -706,7 +833,7 @@ class _SugarGardenState extends State<SugarGarden>
         Text('BAHÇESİ', textAlign: TextAlign.center,
             style: _titleStyle(compact ? 51 : 62, const Color(0xFF8233CB))),
         const SizedBox(height: 13),
-        const Text('TATLI EŞLEŞMELERİN DÜNYASI • V5',
+        const Text('TATLI EŞLEŞMELERİN DÜNYASI • V6',
             textAlign: TextAlign.center,
             style: TextStyle(color: Color(0xFF784184), fontSize: 12,
                 fontWeight: FontWeight.w900, letterSpacing: 2)),
@@ -719,7 +846,8 @@ class _SugarGardenState extends State<SugarGarden>
             colorA: const Color(0xFFB972F8),
             colorB: const Color(0xFF8137C8), small: true),
         const Spacer(),
-        _pill('🍬  60 BÖLÜM     ★  BONUS GÜÇLER', const Color(0xFF8335A3)),
+        _pill('🍬  120 BÖLÜM  •  6 DÜNYA  •  ${_v6.coins} PARA',
+            const Color(0xFF8335A3)),
         SizedBox(height: compact ? 15 : 35),
       ]);
     });
@@ -727,72 +855,119 @@ class _SugarGardenState extends State<SugarGarden>
 
   Widget _mapPage() {
     return Column(children: [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(16, 9, 16, 12),
+      Padding(padding: const EdgeInsets.fromLTRB(16, 9, 16, 12),
         child: Row(children: [
           _roundIcon(Icons.arrow_back_rounded,
               () => setState(() => _page = ViewPage.home)),
           const SizedBox(width: 12),
-          Expanded(child: Text('Şeker Yolu',
-              style: _titleStyle(31, const Color(0xFF8B36B5)))),
-          _pill('$_unlocked / 60', const Color(0xFFDA5A82)),
+          Expanded(child: Text('Şeker Dünyaları',
+              style: _titleStyle(27, const Color(0xFF8B36B5)))),
+          _roundIcon(Icons.storefront_rounded, _openShop),
         ]),
       ),
-      const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 7),
-        child: Text('Bölüm seç, yıldızlarını topla ve yeni dünyaları keşfet!',
-            style: TextStyle(color: Color(0xFF844D93),
-                fontWeight: FontWeight.w700), textAlign: TextAlign.center),
-      ),
-      Expanded(
-        child: GridView.builder(
-          padding: const EdgeInsets.fromLTRB(18, 14, 18, 38),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 5, crossAxisSpacing: 10,
-            mainAxisSpacing: 18, childAspectRatio: .83),
-          itemCount: 60,
-          itemBuilder: (context, index) {
-            final level = index + 1;
-            final unlocked = level <= _unlocked;
-            final stars = _stars[level] ?? 0;
-            return GestureDetector(
-              onTap: unlocked ? () => _openGame(level) : null,
-              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Expanded(child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: unlocked
-                            ? [candyPalette[index % candyTypes],
-                               const Color(0xFFB333AA)]
-                            : [const Color(0xFFC5B1D7),
-                               const Color(0xFF8D79A6)]),
-                    border: Border.all(color: Colors.white, width: 3),
-                    boxShadow: const [BoxShadow(color: Color(0x66391A56),
-                        blurRadius: 5, offset: Offset(0, 4))],
-                  ),
-                  child: Center(child: unlocked
-                      ? Text('$level', style: const TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.w900,
-                          fontSize: 20, shadows: [Shadow(
-                              color: Color(0xAA5D1F79), blurRadius: 3,
-                              offset: Offset(1, 2))]))
-                      : const Icon(Icons.lock_rounded, color: Colors.white, size: 18)),
-                )),
-                const SizedBox(height: 3),
-                Text(stars == 0 ? '☆☆☆' : '${List.filled(stars, '★').join()}${List.filled(3 - stars, '☆').join()}',
-                    style: TextStyle(fontSize: 12,
-                        color: unlocked ? const Color(0xFFFFCF33) :
-                            const Color(0xFFC5B6CB),
-                        fontWeight: FontWeight.w900)),
-              ]),
-            );
-          },
-        ),
-      ),
+      Padding(padding: const EdgeInsets.symmetric(horizontal: 17),
+        child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _pill('${math.min(_unlocked, v6LevelCount)} / $v6LevelCount',
+                const Color(0xFFDA5A82)),
+            _pill('🍬 ${_v6.coins}', const Color(0xFF8335A3)),
+          ])),
+      const SizedBox(height: 8),
+      Expanded(child: ListView(
+        key: const ValueKey('v6-world-map'),
+        padding: const EdgeInsets.fromLTRB(14, 4, 14, 28),
+        children: [for (final world in v6Worlds) _worldPanel(world)],
+      )),
     ]);
+  }
+
+  Widget _worldPanel(V6World world) {
+    final completed = [for (var level = world.start; level <= world.end; level++)
+      if ((_stars[level] ?? 0) > 0) level].length;
+    final claimed = _v6.claimedChests.contains(world.end);
+    final canClaim = _v6.canClaimChest(world.end, _stars);
+    return Container(
+      key: ValueKey('v6-world-${world.start}'),
+      margin: const EdgeInsets.only(bottom: 15),
+      padding: const EdgeInsets.fromLTRB(12, 15, 12, 15),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        gradient: LinearGradient(colors: [Color(world.primary), Color(world.accent)],
+          begin: Alignment.topLeft, end: Alignment.bottomRight),
+        border: Border.all(color: const Color(0xFFFDE8FF), width: 2),
+        boxShadow: const [BoxShadow(color: Color(0x553A145C),
+          blurRadius: 8, offset: Offset(0, 5))],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(world.name.toUpperCase(), style: const TextStyle(
+          color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900,
+          shadows: [Shadow(color: Color(0x77000000), blurRadius: 4)])),
+        const SizedBox(height: 3),
+        Text('${world.subtitle} • $completed/20 tamamlandı',
+          style: const TextStyle(color: Colors.white, fontSize: 12,
+            fontWeight: FontWeight.w700)),
+        const SizedBox(height: 9),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 5, crossAxisSpacing: 7,
+            mainAxisSpacing: 9, childAspectRatio: .86),
+          itemCount: v6LevelsPerWorld,
+          itemBuilder: (context, index) => _levelNode(world.start + index),
+        ),
+        const SizedBox(height: 9),
+        SizedBox(width: double.infinity,
+          child: OutlinedButton.icon(
+            key: ValueKey('v6-chest-${world.end}'),
+            onPressed: canClaim ? () => _claimWorldChest(world.end) : null,
+            icon: Icon(claimed ? Icons.check_circle_rounded
+              : Icons.inventory_2_rounded),
+            label: Text(claimed ? 'DÜNYA SANDIĞI ALINDI ✓'
+                : canClaim ? 'DÜNYA SANDIĞINI AÇ  +150 🍬'
+                : 'SANDIK: ${world.end}. BÖLÜMÜ BİTİR'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFF6D277B),
+              backgroundColor: const Color(0xF5FFFFFF),
+              disabledForegroundColor: const Color(0xFF755481),
+              disabledBackgroundColor: const Color(0x99FFFFFF),
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
+            ),
+          ),
+        ),
+      ]),
+    );
+  }
+
+  Widget _levelNode(int level) {
+    final unlocked = level <= _unlocked;
+    final stars = (_stars[level] ?? 0).clamp(0, 3).toInt();
+    return GestureDetector(
+      key: ValueKey('v6-level-$level'),
+      onTap: unlocked ? () => _openGame(level) : null,
+      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Expanded(child: Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: unlocked ? const Color(0xFFFAE7FF)
+                : const Color(0xBB6A538B),
+            border: Border.all(color: Colors.white, width: 2),
+            boxShadow: const [BoxShadow(color: Color(0x55381861),
+                blurRadius: 3, offset: Offset(0, 2))],
+          ),
+          child: Center(child: unlocked
+            ? Text('$level', style: const TextStyle(
+                color: Color(0xFF82389A), fontWeight: FontWeight.w900,
+                fontSize: 18))
+            : const Icon(Icons.lock_rounded, color: Colors.white, size: 18)),
+        )),
+        Text(stars == 0 ? '☆☆☆' :
+            '${List.filled(stars, '★').join()}${List.filled(3 - stars, '☆').join()}',
+          style: const TextStyle(fontSize: 12,
+            color: Color(0xFFFFE88A), fontWeight: FontWeight.w900)),
+      ]),
+    );
   }
 
   Widget _playPage() {
@@ -812,7 +987,7 @@ class _SugarGardenState extends State<SugarGarden>
               const SizedBox(width: 10),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                Text('BÖLÜM ${g.level}  •  V5', style: const TextStyle(
+                Text('BÖLÜM ${g.level}  •  V6', style: const TextStyle(
                     fontSize: 12, fontWeight: FontWeight.w900,
                     letterSpacing: 1.6, color: Color(0xFF77328B))),
                 Text(g.plan.name, maxLines: 1,
@@ -1289,10 +1464,10 @@ class _SugarGardenState extends State<SugarGarden>
     level: g.level,
     score: g.score,
     stars: g.stars,
-    lastLevel: g.level >= 60,
+    lastLevel: g.level >= v6LevelCount,
     bonusShuffle: _threeStarPrize,
     onPrimary: () {
-      if (_result == true && g.level >= 60) {
+      if (_result == true && g.level >= v6LevelCount) {
         setState(() { _result = null; _page = ViewPage.map; });
       } else {
         _openGame(_result == true ? g.level + 1 : g.level);
