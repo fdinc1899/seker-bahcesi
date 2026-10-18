@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'candy_art.dart';
 import 'game_engine.dart';
 import 'game_audio.dart';
+import 'v5_fx.dart';
 import 'level_result.dart';
 import 'reward_rules.dart';
 import 'daily_rewards.dart';
@@ -28,7 +29,7 @@ class SugarGarden extends StatefulWidget {
 }
 
 class _SugarGardenState extends State<SugarGarden>
-    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   final GameAudio _audio = GameAudio();
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   SharedPreferences? _storage;
@@ -55,6 +56,11 @@ class _SugarGardenState extends State<SugarGarden>
   Set<int> _newborn = {};
   List<Offset> _burstPositions = [];
   List<Color> _burstColors = [];
+  List<Cell> _hintCells = [];
+  int _burstPoints = 0;
+  int _comboCount = 0;
+  late final AnimationController _hintAnimation;
+  late final AnimationController _winAnimation;
   late final AnimationController _burstAnimation;
   double _boardCell = 40;
 
@@ -64,6 +70,10 @@ class _SugarGardenState extends State<SugarGarden>
     WidgetsBinding.instance.addObserver(this);
     _burstAnimation = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 950));
+    _hintAnimation = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 840));
+    _winAnimation = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 2900));
     _load();
   }
 
@@ -84,6 +94,8 @@ class _SugarGardenState extends State<SugarGarden>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _burstAnimation.dispose();
+    _hintAnimation.dispose();
+    _winAnimation.dispose();
     _audio.dispose();
     super.dispose();
   }
@@ -184,6 +196,11 @@ class _SugarGardenState extends State<SugarGarden>
       _power = PowerMode.none;
       _message = 'Şekerleri sürükle ve eşleştir!';
       _comboBanner = '';
+      _comboCount = 0;
+      _burstPoints = 0;
+      _hintCells = [];
+      _hintAnimation.stop();
+      _winAnimation.reset();
       _vanishing = {};
       _newborn = {};
     });
@@ -195,6 +212,8 @@ class _SugarGardenState extends State<SugarGarden>
     if (_busy) return;
     setState(() {
       _page = ViewPage.home;
+      _hintCells = [];
+      _hintAnimation.stop();
       _result = null;
       _threeStarPrize = false;
       _power = PowerMode.none;
@@ -213,6 +232,9 @@ class _SugarGardenState extends State<SugarGarden>
     setState(() {
       _busy = true;
       _selected = null;
+      _hintCells = [];
+      _hintAnimation.stop();
+      _comboCount = 0;
       _message = '';
       g.swap(a, b);
     });
@@ -252,6 +274,9 @@ class _SugarGardenState extends State<SugarGarden>
         return candyPalette[candy?.type ?? 0];
       }).toList();
       setState(() {
+        _comboCount = chain;
+        _burstPoints = matched.length * (100 + (chain - 1) * 55) +
+            math.max(0, matched.length - 3) * 60;
         _vanishing = matched
             .map((cell) => g.board[cell.row][cell.col]?.id)
             .whereType<int>()
@@ -319,6 +344,7 @@ class _SugarGardenState extends State<SugarGarden>
         _message = 'BÖLÜM TAMAMLANDI!';
       });
       _audio.play(CandySound.win);
+      _winAnimation.forward(from: 0);
       _fx(strong: true);
     } else if (g.moves <= 0) {
       setState(() {
@@ -350,6 +376,8 @@ class _SugarGardenState extends State<SugarGarden>
       _power = PowerMode.none;
       _selected = null;
       _busy = true;
+      _hintCells = [];
+      _hintAnimation.stop();
       g.moves--;
     });
     _fx(strong: true);
@@ -361,6 +389,8 @@ class _SugarGardenState extends State<SugarGarden>
     if (g == null || _busy || _result != null || _shuffles <= 0) return;
     setState(() {
       _shuffles--;
+      _hintCells = [];
+      _hintAnimation.stop();
       _power = PowerMode.none;
       _selected = null;
       g.newBoard();
@@ -368,6 +398,36 @@ class _SugarGardenState extends State<SugarGarden>
     });
     _audio.play(CandySound.special);
     _save();
+  }
+
+  // V5: an on-demand suggestion. createsMatch restores the original board
+  // after simulating the swap, so this never spends moves or changes a save.
+  void _showHint() {
+    final g = _game;
+    if (g == null || _busy || _result != null) return;
+    List<Cell>? suggestion;
+    for (var r = 0; r < gridSize && suggestion == null; r++) {
+      for (var c = 0; c < gridSize && suggestion == null; c++) {
+        final first = Cell(r, c);
+        for (final second in <Cell>[Cell(r, c + 1), Cell(r + 1, c)]) {
+          if (g.inBounds(second) && g.createsMatch(first, second)) {
+            suggestion = [first, second];
+            break;
+          }
+        }
+      }
+    }
+    if (suggestion == null) {
+      setState(() => _message = 'Hamle bulunamadı, karıştırmayı dene!');
+      return;
+    }
+    setState(() {
+      _hintCells = suggestion!;
+      _selected = null;
+      _message = 'İPUCU: Parlayan iki şekeri yer değiştir!';
+    });
+    _hintAnimation.repeat(reverse: true);
+    _fx();
   }
 
   Cell? _touchCell(Offset point) {
@@ -646,7 +706,7 @@ class _SugarGardenState extends State<SugarGarden>
         Text('BAHÇESİ', textAlign: TextAlign.center,
             style: _titleStyle(compact ? 51 : 62, const Color(0xFF8233CB))),
         const SizedBox(height: 13),
-        const Text('TATLI EŞLEŞMELERİN DÜNYASI',
+        const Text('TATLI EŞLEŞMELERİN DÜNYASI • V5',
             textAlign: TextAlign.center,
             style: TextStyle(color: Color(0xFF784184), fontSize: 12,
                 fontWeight: FontWeight.w900, letterSpacing: 2)),
@@ -752,7 +812,7 @@ class _SugarGardenState extends State<SugarGarden>
               const SizedBox(width: 10),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                Text('BÖLÜM ${g.level}  •  V4', style: const TextStyle(
+                Text('BÖLÜM ${g.level}  •  V5', style: const TextStyle(
                     fontSize: 12, fontWeight: FontWeight.w900,
                     letterSpacing: 1.6, color: Color(0xFF77328B))),
                 Text(g.plan.name, maxLines: 1,
@@ -761,6 +821,8 @@ class _SugarGardenState extends State<SugarGarden>
                         fontWeight: FontWeight.w900,
                         color: Color(0xFF8439A3))),
               ])),
+              _roundIcon(Icons.lightbulb_rounded, _showHint),
+              const SizedBox(width: 6),
               _roundIcon(Icons.help_outline_rounded, _howToPlay),
               const SizedBox(width: 6),
               _roundIcon(_sound ? Icons.volume_up_rounded :
@@ -881,6 +943,14 @@ class _SugarGardenState extends State<SugarGarden>
           ),
         ]),
         if (_result != null) Positioned.fill(child: _resultOverlay(g)),
+        if (_result == true) Positioned.fill(child: IgnorePointer(
+          child: AnimatedBuilder(
+            animation: _winAnimation,
+            builder: (context, _) => CustomPaint(
+              painter: V5CelebrationPainter(progress: _winAnimation.value),
+            ),
+          ),
+        )),
       ]);
     });
   }
@@ -966,6 +1036,36 @@ class _SugarGardenState extends State<SugarGarden>
                   child: IgnorePointer(child: _obstacleTile(g.obstacles[r][c])),
                 ),
           ],
+          if (_hintCells.isNotEmpty)
+            Positioned.fill(child: IgnorePointer(child: AnimatedBuilder(
+              animation: _hintAnimation,
+              builder: (context, _) => Stack(children: [
+                for (final spot in _hintCells)
+                  Positioned(
+                    left: inset + spot.col * cell,
+                    top: inset + spot.row * cell,
+                    width: cell,
+                    height: cell,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        color: const Color(0xFFFFD34F).withValues(
+                          alpha: .15 + .22 * _hintAnimation.value),
+                        border: Border.all(
+                          color: Colors.white.withValues(
+                            alpha: .7 + .3 * _hintAnimation.value),
+                          width: 2.5 + _hintAnimation.value * 1.8),
+                        boxShadow: [BoxShadow(
+                          color: const Color(0xFFFFE761).withValues(
+                            alpha: .45 + _hintAnimation.value * .40),
+                          blurRadius: 10 + _hintAnimation.value * 13,
+                          spreadRadius: 2 + _hintAnimation.value * 2,
+                        )],
+                      ),
+                    ),
+                  ),
+              ]),
+            ))),
           Positioned.fill(child: IgnorePointer(child: AnimatedBuilder(
             animation: _burstAnimation,
             builder: (context, child) => CustomPaint(
@@ -974,6 +1074,17 @@ class _SugarGardenState extends State<SugarGarden>
                 progress: _burstAnimation.value,
                 centers: _burstPositions,
                 colors: _burstColors.isEmpty ? [Colors.white] : _burstColors,
+              ),
+            ),
+          ))),
+          Positioned.fill(child: IgnorePointer(child: AnimatedBuilder(
+            animation: _burstAnimation,
+            builder: (context, _) => CustomPaint(
+              painter: V5ScorePainter(
+                progress: _burstAnimation.value,
+                centers: _burstPositions,
+                points: _burstPoints,
+                chain: _comboCount,
               ),
             ),
           ))),
