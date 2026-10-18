@@ -1,33 +1,21 @@
-# Şeker Bahçesi 🍬 — V2 Paket 5: Kutlama ve Yıldız Ödülleri
+# Şeker Bahçesi 🍬 – V2 Paket 6: Günlük Hediye ve Görevler
 
-Bu paket önceki **V2 Paket 4'ün üzerine kurulmuş tam Flutter kaynak projesidir**. Telefon üzerinde çalıştığı doğrulanmış şeker eşleştirme, özgün arka plan müziği, patlama sesleri, kombo animasyonları, buz/çikolata/kilit engelleri, 60 bölüm, seviye haritası, yerel kayıt ve güçlendiriciler korunur.
+Bu paket **V2 Paket 5'in üzerine kurulu tam Flutter kaynak projesidir**. Önceki 60 bölüm, ses ve müzik, patlama animasyonları, 4-5 şeker özel yetenekleri, buz/çikolata/kilit, bölüm sonuç ekranı ve +1 Karıştır üç yıldız ödülü korunur.
 
-## Bu sürümde yenilikler
+## Yenilikler
 
-- **Kazanma ekranı:** arka planda uçuşan çok renkli konfetiler, sırayla açılan altın yıldızlar, puan rozeti ve animasyonlu sonuç kartı.
-- **Üç yıldız ödülü:** bir bölümde *ilk kez* 3 yıldız elde edildiğinde **+1 Karıştır** güçlendiricisi. Tekrar oynayarak ödül çoğaltılamaz; mevcut `stars` kaydı kontrol edilir.
-- **Kaybetme ekranı:** hedefe ulaşılmadığında tekrar deneme düğmesi ve kısa eşleştirme ipucu.
-- **Geçiş:** sonuç ekranından sonraki bölüme, bölüm haritasına veya aynı bölümü yeniden oynamaya geçiş.
-- **Ana ekran OYNA:** bitmiş bölüm yerine açılmış en güncel bölüme; devam eden kaydedilmiş oyun varsa ona geçer.
-- **Ses:** Paket 4'ten gelen arka plan müziği, kazanma ve kaybetme sesleri aynen korunur.
+- Ana ekranın sol üstünde **hediye simgesi**. Açınca günlük hediye ve üç görev gösterilir.
+- **Giriş hediyesi:** yerel takvime göre günde en fazla bir defa. Her gün değişen Çekiç / Satır / Karıştır ödülü; 7 günlük tekrarlanan ödül döngüsü. Arka arkaya günlerde seri yükselir.
+- **Günlük görevler:** 5 geçerli eşleşme, 2 özel şeker oluşturma, 1 bölüm kazanma. Her biri tamamlanınca yalnızca bir kere ek güçlendirici alınır.
+- Görev ilerlemesi ve ödül alma durumu `dailyProgressV2` anahtarında kaydedilir. Gün değişince görev sayaçları sıfırlanır; önceki `stars`, `unlocked`, `session`, `hammers`, `lineBlasts`, `shuffles` ve `sound` anahtarları aynen korunur.
+- Tamamlanmış görevlerde ödülü **ÖDÜLÜ AL** tuşuna basarak alırsın.
 
-## Kayıt uyumluluğu
+## GitHub / test
 
-Önceki `unlocked`, `stars`, `session`, `hammers`, `lineBlasts`, `shuffles` ve `sound` SharedPreferences anahtarları korunur; yeni bir kaydetme alanı eklenmedi. İlk 3 yıldız ödülünün bir kere verilmesi zaten kaydedilen en iyi yıldız sayısından hesaplanır. APK'ların aynı paket kimliği ve imza ile güncellenmesi gerekir; **oyunun eski kurulumunu silmeyin**; aksi hâlde cihazdaki yerel ilerleme kaybolabilir.
+`main` dalına yükleme GitHub Actions üzerinden `flutter pub get`, `flutter test` ve `flutter build apk --debug` çalıştırır. Başarılı olunca `seker-bahcesi-v2-paket6-gunluk-odul-apk` adlı indirilebilir artifact oluşur. **Bu ortamda Flutter SDK olmadığından testlerin sonuçları GitHub'da doğrulanmalıdır.**
 
-## GitHub'da APK alma
+## Önemli
 
-Depoda ana dala yükleyince `.github/workflows/android-apk.yml` otomatik olarak `flutter pub get`, `flutter test` ve `flutter build apk --debug` çalıştırır. Testler geçerse **Actions → en yeni başarılı Android APK oluştur → Artifacts → `seker-bahcesi-v2-paket5-kutlama-odul-apk`** altından APK içeren ZIP indirilir.
-
-Bu Flutter projesinde sürüm `1.5.0+6` olarak ayarlanmıştır. **Bu ortamda Flutter SDK yok, dolayısıyla testlerin ve APK derlemesinin sonucu GitHub Actions tarafından doğrulanmalıdır.** Proje Google Play'e hazır imzalı sürüm değildir.
-
-## Geliştirme ve kaynaklar
-
-- `lib/main.dart` : ekranlar, ilerleme kaydı, giriş ve ses entegrasyonu
-- `lib/level_result.dart` : animasyonlu yıldızlar, konfeti, ödül ve başarısızlık kartları
-- `lib/reward_rules.dart` : tek seferlik 3 yıldız güçlendirici ödülü
-- `lib/game_engine.dart` : eşleştirme motoru ve bölüm hedefleri
-- `lib/game_audio.dart` ve `assets/audio/` : yerel özgün müzik ve sesler
-- `test/level_result_test.dart` ve `test/reward_rules_test.dart` : ödül ve sonuç akışı testleri
-
-Oyunun çizimleri ve sesleri özgündür; Candy Crush marka/varlıkları kullanılmaz. iOS kaynak uyumu korunur ama iOS ikonu (`ios: false`) yalnızca Android derlemesi sırasında bilerek kapalıdır. iOS için Mac/Xcode gerekir.
+- Bu bir çevrimdışı prototip; ödüller cihazın yerel tarihine göre ilerler. Saat değişikliğiyle oynanması tamamen engellenmiş değildir; sunucuya bağlı güvenli ekonomi sisteminin alternatifi değildir.
+- Var olan APK'yı silmeden yeni sürümü güncelleyin; telefonun yerel kayıtlarının korunması için aynı imza ve paket adı gerekir.
+- Eski GitHub paketlerini ayrı ayrı yüklemek zorunda değilsiniz: bu ZIP tam projeyi içerir.

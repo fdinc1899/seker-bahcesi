@@ -9,6 +9,7 @@ import 'game_engine.dart';
 import 'game_audio.dart';
 import 'level_result.dart';
 import 'reward_rules.dart';
+import 'daily_rewards.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +30,7 @@ class SugarGarden extends StatefulWidget {
 class _SugarGardenState extends State<SugarGarden>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final GameAudio _audio = GameAudio();
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   SharedPreferences? _storage;
   bool _loading = true;
   bool _sound = true;
@@ -42,6 +44,7 @@ class _SugarGardenState extends State<SugarGarden>
   bool _busy = false;
   bool? _result;
   bool _threeStarPrize = false;
+  DailyProgress _daily = DailyProgress.fresh(DateTime.now());
   PowerMode _power = PowerMode.none;
   Cell? _selected;
   Cell? _dragStart;
@@ -72,6 +75,8 @@ class _SugarGardenState extends State<SugarGarden>
       _save();
     } else if (state == AppLifecycleState.resumed) {
       _audio.resumeMusic();
+      _daily.advance(DateTime.now());
+      _save();
     }
   }
 
@@ -97,6 +102,13 @@ class _SugarGardenState extends State<SugarGarden>
         (jsonDecode(progress) as Map<String, dynamic>).forEach((key, value) {
           _stars[int.parse(key)] = (value as num).toInt();
         });
+      }
+      final dailyData = prefs.getString('dailyProgressV2');
+      if (dailyData != null) {
+        _daily = DailyProgress.fromJson(
+          Map<String, dynamic>.from(jsonDecode(dailyData) as Map), DateTime.now());
+      } else {
+        _daily = DailyProgress.fresh(DateTime.now());
       }
       final saved = prefs.getString('session');
       if (saved != null) {
@@ -124,6 +136,7 @@ class _SugarGardenState extends State<SugarGarden>
     await prefs.setInt('hammers', _hammers);
     await prefs.setInt('lineBlasts', _lineBlasts);
     await prefs.setInt('shuffles', _shuffles);
+    await prefs.setString('dailyProgressV2', jsonEncode(_daily.toJson()));
     final g = _game;
     if (g != null && g.moves > 0 && !g.won) {
       await prefs.setString('session', jsonEncode(g.toJson()));
@@ -216,6 +229,7 @@ class _SugarGardenState extends State<SugarGarden>
       return;
     }
     g.moves--;
+    _daily.registerMatch(DateTime.now());
     _fx(strong: true);
     await _resolve(firstWave: combo, preferred: b);
   }
@@ -265,6 +279,9 @@ class _SugarGardenState extends State<SugarGarden>
       if (damaged > 0 && chain == 1) {
         _message = 'ENGEL KIRILDI!';
       }
+      if (wave.spawns.isNotEmpty) {
+        _daily.registerSpecial(DateTime.now(), wave.spawns.length);
+      }
       g.installSpecials(wave.spawns);
       final ids = g.collapse();
       setState(() {
@@ -288,6 +305,7 @@ class _SugarGardenState extends State<SugarGarden>
       setState(() => _message = 'Yeni şekerler karıştırıldı!');
     }
     if (g.won) {
+      _daily.registerWin(DateTime.now());
       // The existing best-stars save key prevents repeat reward farming.
       final previousBest = _stars[g.level] ?? 0;
       final earned = g.stars;
@@ -392,9 +410,133 @@ class _SugarGardenState extends State<SugarGarden>
     _trySwap(from, dest);
   }
 
-  void _howToPlay() {
+  void _receiveGift(DailyGift gift) {
+    _hammers += gift.hammers;
+    _lineBlasts += gift.lines;
+    _shuffles += gift.shuffles;
+    _audio.play(CandySound.win);
+    _save();
+  }
+
+  void _openDailyRewards() {
+    _daily.advance(DateTime.now());
+    _fx();
+    _save();
+    final navContext = _navigatorKey.currentContext;
+    if (navContext == null) return;
     showDialog<void>(
-      context: context,
+      context: navContext,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, refreshDialog) {
+          final canClaim = _daily.canClaim(DateTime.now());
+          return AlertDialog(
+            key: const ValueKey('daily-rewards-dialog'),
+            backgroundColor: const Color(0xFFFFF5FE),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+            title: const Row(children: [
+              Icon(Icons.card_giftcard_rounded, color: Color(0xFFD148A5)),
+              SizedBox(width: 8),
+              Expanded(child: Text('GÜNLÜK HEDİYELER',
+                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900,
+                  color: Color(0xFF8731A3)))),
+            ]),
+            content: SingleChildScrollView(child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Hediye serisi: ${_daily.streak} gün',
+                  style: const TextStyle(fontWeight: FontWeight.w800,
+                    color: Color(0xFF8D489B))),
+                const SizedBox(height: 8),
+                FilledButton.icon(
+                  key: const ValueKey('daily-claim'),
+                  onPressed: canClaim ? () {
+                    final reward = _daily.claim(DateTime.now());
+                    if (reward == null) return;
+                    setState(() => _receiveGift(reward));
+                    refreshDialog(() {});
+                    ScaffoldMessenger.of(dialogContext).showSnackBar(SnackBar(
+                      content: Text('Günlük hediye: ${reward.description}'),
+                      duration: const Duration(seconds: 2),
+                    ));
+                  } : null,
+                  icon: const Icon(Icons.redeem_rounded),
+                  label: Text(canClaim ? 'BUGÜNKÜ HEDİYENİ AL' : 'BUGÜN ALINDI ✓'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFAA42C7),
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text('GÜNLÜK GÖREVLER', style: TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.w900,
+                  color: Color(0xFF8335A3))),
+                const SizedBox(height: 5),
+                for (var task = 0; task < 3; task++) ...[
+                  Container(
+                    margin: const EdgeInsets.only(top: 9),
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(13),
+                      border: Border.all(color: const Color(0xFFEED4F4)),
+                    ),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(children: [
+                          Expanded(child: Text(_daily.title(task),
+                            style: const TextStyle(fontWeight: FontWeight.w800,
+                              color: Color(0xFF76338B)))),
+                          Text('${_daily.progress(task)}/${_daily.goal(task)}',
+                            style: const TextStyle(color: Color(0xFF934AA6))),
+                        ]),
+                        const SizedBox(height: 6),
+                        LinearProgressIndicator(
+                          value: (_daily.progress(task) / _daily.goal(task))
+                            .clamp(0.0, 1.0).toDouble(),
+                          minHeight: 6,
+                          backgroundColor: const Color(0xFFF3E3F5),
+                          color: const Color(0xFFFF77AE)),
+                        const SizedBox(height: 5),
+                        Align(alignment: Alignment.centerRight,
+                          child: TextButton(
+                            key: ValueKey('daily-mission-$task'),
+                            onPressed: _daily.canCollectMission(task) ? () {
+                              final reward = _daily.collectMission(task);
+                              if (reward == null) return;
+                              setState(() => _receiveGift(reward));
+                              refreshDialog(() {});
+                              ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                SnackBar(content: Text('Ödül: ${reward.description}')));
+                            } : null,
+                            child: Text(_daily.rewarded.contains(task)
+                              ? 'ALINDI ✓' : 'ÖDÜLÜ AL'),
+                          )),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                const Text('Görevler her gece sıfırlanır. Ödüller bu cihazda saklanır.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 11, color: Color(0xFF976CA0))),
+              ],
+            )),
+            actions: [TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('KAPAT'),
+            )],
+          );
+        },
+      ),
+    );
+  }
+
+  void _howToPlay() {
+    final navContext = _navigatorKey.currentContext;
+    if (navContext == null) return;
+    showDialog<void>(
+      context: navContext,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFFFFF5FF),
         title: const Text('Nasıl Oynanır?',
@@ -412,6 +554,7 @@ class _SugarGardenState extends State<SugarGarden>
           '• Kilitli şekeri hareket ettiremezsin; komşu eşleşmeyle kilidi aç.\n\n'
           '• Hamlelerin bitmeden hedef puana ulaş veya istenen şekeri topla.\n\n'
           '• Çekiç, satır patlatma ve karıştırma güçlerini kullan.\n\n'
+          '• Günlük hediye ve görevler için ana ekrandaki hediye simgesini aç.\n\n'
           '• Başarılı olduğunda yeni bölümler açılır.',
           style: TextStyle(height: 1.35, fontSize: 15),
         ),
@@ -426,6 +569,7 @@ class _SugarGardenState extends State<SugarGarden>
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: _navigatorKey,
       title: 'Şeker Bahçesi',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -467,6 +611,9 @@ class _SugarGardenState extends State<SugarGarden>
           padding: const EdgeInsets.fromLTRB(22, 12, 18, 0),
           child: Row(children: [
             _roundIcon(Icons.help_outline_rounded, _howToPlay),
+            const SizedBox(width: 9),
+            Tooltip(message: 'Günlük hediye ve görevler',
+              child: _roundIcon(Icons.card_giftcard_rounded, _openDailyRewards)),
             const Spacer(),
             _pill('★ ${_stars.values.fold<int>(0, (a, b) => a + b)}',
                 const Color(0xFFEF8C19)),
