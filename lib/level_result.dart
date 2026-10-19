@@ -134,7 +134,7 @@ class _LevelResultOverlayState extends State<LevelResultOverlay>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(win ? 'MÜKEMMEL!' : 'TEKRAR DENE!',
+          Text(win ? 'TEBRİKLER!' : 'TEKRAR DENE!',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: win ? const Color(0xFFE8338A) :
@@ -148,7 +148,7 @@ class _LevelResultOverlayState extends State<LevelResultOverlay>
                 ],
               )),
           const SizedBox(height: 4),
-          Text(win ? 'TATLI ZAFER!' : 'YENİDEN BAŞARABİLİRSİN',
+          Text(win ? 'ŞEKER ŞÖLENİ!' : 'YENİDEN BAŞARABİLİRSİN',
               style: const TextStyle(
                 letterSpacing: 1.1,
                 fontSize: 11,
