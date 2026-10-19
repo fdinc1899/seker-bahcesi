@@ -1,7 +1,7 @@
 name: seker_bahcesi
 description: Ozgun, animasyonlu, bolumlu Turkce seker eslestirme oyunu.
 publish_to: 'none'
-version: 2.2.0+13
+version: 2.3.0+14
 
 environment:
   sdk: '>=3.4.0 <4.0.0'

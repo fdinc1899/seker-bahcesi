@@ -11,6 +11,8 @@ import 'v5_fx.dart';
 import 'v6_progress.dart';
 import 'v7_events.dart';
 import 'v8_season.dart';
+import 'v9_rewards.dart';
+import 'v9_wheel.dart';
 import 'level_result.dart';
 import 'reward_rules.dart';
 import 'daily_rewards.dart';
@@ -52,6 +54,7 @@ class _SugarGardenState extends State<SugarGarden>
   V6Progress _v6 = V6Progress();
   V7Progress _v7 = V7Progress(today: DateTime.now());
   V8SeasonProgress _v8 = V8SeasonProgress(today: DateTime.now());
+  V9RewardsProgress _v9 = V9RewardsProgress(today: DateTime.now());
   PowerMode _power = PowerMode.none;
   Cell? _selected;
   Cell? _dragStart;
@@ -95,6 +98,7 @@ class _SugarGardenState extends State<SugarGarden>
       setState(() {
         _v7.advance(DateTime.now());
         _v8.advance(DateTime.now());
+        _v9.advance(DateTime.now());
       });
       _save();
     }
@@ -148,6 +152,16 @@ class _SugarGardenState extends State<SugarGarden>
           _v8 = V8SeasonProgress(today: DateTime.now());
         }
       }
+      final v9Data = prefs.getString('v9Rewards');
+      if (v9Data != null) {
+        try {
+          _v9 = V9RewardsProgress.fromJson(
+              Map<String, dynamic>.from(jsonDecode(v9Data) as Map),
+              DateTime.now());
+        } catch (_) {
+          _v9 = V9RewardsProgress(today: DateTime.now());
+        }
+      }
       final progress = prefs.getString('stars');
       if (progress != null) {
         (jsonDecode(progress) as Map<String, dynamic>).forEach((key, value) {
@@ -192,6 +206,7 @@ class _SugarGardenState extends State<SugarGarden>
     await prefs.setString('v6Progress', jsonEncode(_v6.toJson()));
     await prefs.setString('v7Progress', jsonEncode(_v7.toJson()));
     await prefs.setString('v8Season', jsonEncode(_v8.toJson()));
+    await prefs.setString('v9Rewards', jsonEncode(_v9.toJson()));
     final g = _game;
     if (g != null && g.moves > 0 && !g.won) {
       await prefs.setString('session', jsonEncode(g.toJson()));
@@ -347,6 +362,7 @@ class _SugarGardenState extends State<SugarGarden>
       }
       g.clear(matched, chain);
       _v8.recordWave(matchedCandyTypes, chain, DateTime.now());
+      _v9.recordWave(matchedCandyTypes);
       if (damaged > 0 && chain == 1) {
         _message = 'ENGEL KIRILDI!';
       }
@@ -779,6 +795,7 @@ class _SugarGardenState extends State<SugarGarden>
     setState(() {
       _v7.advance(DateTime.now());
       _v8.advance(DateTime.now());
+      _v9.advance(DateTime.now());
     });
     _fx();
     showModalBottomSheet<void>(
@@ -792,7 +809,7 @@ class _SugarGardenState extends State<SugarGarden>
           height: MediaQuery.sizeOf(context).height * .78,
           child: Column(children: [
             const SizedBox(height: 16),
-            const Text('🏆 ETKİNLİK MERKEZİ  •  V8',
+            const Text('🏆 ETKİNLİK MERKEZİ  •  V9',
               key: ValueKey('v7-event-center'),
               style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900,
                   color: Color(0xFF88349C))),
@@ -804,6 +821,10 @@ class _SugarGardenState extends State<SugarGarden>
             Expanded(child: ListView(
               padding: const EdgeInsets.fromLTRB(14, 0, 14, 20),
               children: [
+                _v9DailyCard(refresh),
+                const SizedBox(height: 14),
+                _v9CollectionCard(refresh),
+                const SizedBox(height: 18),
                 _v8SeasonCard(refresh),
                 const SizedBox(height: 18),
                 const Text('HAFTALIK ŞEKER YARIŞI',
@@ -835,6 +856,130 @@ class _SugarGardenState extends State<SugarGarden>
           ]),
         )),
       ),
+    );
+  }
+
+  // V9: The wheel and collection use their own save key; older progress
+  // and offline gameplay mechanics are unchanged.
+  void _openV9Wheel(StateSetter refresh) {
+    final navContext = _navigatorKey.currentContext;
+    if (navContext == null) return;
+    _fx();
+    showDialog<void>(
+      context: navContext,
+      builder: (dialogContext) => V9WheelDialog(
+        progress: _v9,
+        onSpin: (slot) {
+          final reward = _v9.spin(slot, DateTime.now());
+          if (reward == null) return null;
+          setState(() {
+            _v6.coins += reward.coins;
+            _hammers += reward.hammers;
+            _lineBlasts += reward.lines;
+            _shuffles += reward.shuffles;
+          });
+          refresh(() {});
+          _audio.play(CandySound.win);
+          _save();
+          return reward;
+        },
+      ),
+    );
+  }
+
+  void _claimV9Color(int type, StateSetter refresh) {
+    final coins = _v9.claimColor(type);
+    if (coins == null) return;
+    setState(() => _v6.coins += coins);
+    refresh(() {});
+    _audio.play(CandySound.win);
+    _save();
+  }
+
+  Widget _v9DailyCard(StateSetter refresh) {
+    final used = !_v9.canSpin(DateTime.now());
+    final index = _v9.wheelIndex;
+    return Container(
+      key: const ValueKey('v9-wheel-card'),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [
+          Color(0xFFFFD5A3), Color(0xFFFFE6F9),
+        ]),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFF4B579), width: 1.5),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('🎡 GÜNLÜK ŞANS ÇARKI  •  V9',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900,
+                color: Color(0xFF8C3C85))),
+        const SizedBox(height: 5),
+        Text(used && index != null
+            ? 'Bugünkü ödül: ${v9WheelRewards[index].name}'
+            : 'Her gün bir ücretsiz çevirme ve sürpriz ödül!',
+          style: const TextStyle(fontSize: 12,
+              color: Color(0xFF855280))),
+        const SizedBox(height: 10),
+        Align(alignment: Alignment.centerRight,
+          child: FilledButton.icon(
+            key: const ValueKey('v9-open-wheel'),
+            onPressed: () => _openV9Wheel(refresh),
+            icon: const Icon(Icons.autorenew_rounded),
+            label: Text(used ? 'ÇARKI GÖR' : 'ÇARKI ÇEVİR'),
+          ),
+        ),
+      ]),
+    );
+  }
+
+  Widget _v9CollectionCard(StateSetter refresh) {
+    return Container(
+      key: const ValueKey('v9-collection-card'),
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7EDFF),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFD7BAF1)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('🍭 ŞEKER KOLEKSİYONU  •  V9',
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900,
+              color: Color(0xFF873599))),
+        const SizedBox(height: 4),
+        const Text('Her renkten 45 şeker patlat, 100 🍬 kazan. Her renk ödülü bir kez alınır.',
+          style: TextStyle(fontSize: 11, color: Color(0xFF7A5285))),
+        for (var i = 0; i < v9CollectionColorNames.length; i++) ...[
+          const SizedBox(height: 9),
+          Row(children: [
+            Container(width: 20, height: 20,
+              decoration: BoxDecoration(color: candyPalette[i],
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2))),
+            const SizedBox(width: 6),
+            Expanded(child: Text(v9CollectionColorNames[i],
+              style: const TextStyle(fontWeight: FontWeight.w800,
+                  fontSize: 12, color: Color(0xFF783985)))),
+            Text('${_v9.colorCounts[i].clamp(0, v9CollectionGoal)}/$v9CollectionGoal',
+              style: const TextStyle(fontSize: 11)),
+            const SizedBox(width: 5),
+            SizedBox(width: 96, child: TextButton(
+              key: ValueKey('v9-color-claim-$i'),
+              onPressed: _v9.canClaimColor(i)
+                  ? () => _claimV9Color(i, refresh) : null,
+              child: Text(_v9.collectionClaims.contains(i)
+                  ? 'ALINDI ✓' : '100 🍬 AL',
+                style: const TextStyle(fontSize: 10)),
+            )),
+          ]),
+          LinearProgressIndicator(
+            value: (_v9.colorCounts[i] / v9CollectionGoal)
+                .clamp(0.0, 1.0).toDouble(),
+            minHeight: 5,
+            backgroundColor: const Color(0xFFE6D9EB),
+            color: candyPalette[i],
+          ),
+        ],
+      ]),
     );
   }
 
@@ -1134,7 +1279,7 @@ class _SugarGardenState extends State<SugarGarden>
         Text('BAHÇESİ', textAlign: TextAlign.center,
             style: _titleStyle(compact ? 51 : 62, const Color(0xFF8233CB))),
         const SizedBox(height: 13),
-        const Text('TATLI EŞLEŞMELERİN DÜNYASI • V8',
+        const Text('TATLI EŞLEŞMELERİN DÜNYASI • V9',
             textAlign: TextAlign.center,
             style: TextStyle(color: Color(0xFF784184), fontSize: 12,
                 fontWeight: FontWeight.w900, letterSpacing: 2)),
