@@ -16,6 +16,8 @@ import 'v9_wheel.dart';
 import 'level_result.dart';
 import 'reward_rules.dart';
 import 'daily_rewards.dart';
+import 'v12_backup.dart';
+import 'v12_map_path.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -1287,7 +1289,7 @@ class _SugarGardenState extends State<SugarGarden>
             Text('Bahçesi', textAlign: TextAlign.center,
               style: _titleStyle(compact ? 45 : 54, const Color(0xFFFFC642))),
             const SizedBox(height: 3),
-            const Text('PREMIUM GÖRSELLER • V11',
+            const Text('MASALSI YOL + YEDEKLEME • V12',
               style: TextStyle(color: Color(0xFFFFF2D7), fontSize: 10,
                   fontWeight: FontWeight.w900, letterSpacing: 1.6)),
           ]),
@@ -1313,10 +1315,169 @@ class _SugarGardenState extends State<SugarGarden>
           _homeMenuButton(Icons.card_giftcard_rounded, 'ETKİNLİK', _openEventCenter),
           _homeMenuButton(Icons.map_rounded, 'HARİTA',
               () => setState(() => _page = ViewPage.map)),
+          _homeMenuButton(Icons.save_alt_rounded, 'YEDEK', _openBackupCenter),
         ]),
         SizedBox(height: compact ? 11 : 24),
       ]);
     });
+  }
+
+  // V12: portable manual backups survive reinstall only when the user saves
+  // the copied code OUTSIDE the app (Notes, email, Drive, etc.).
+  Future<void> _openBackupCenter() async {
+    await _save();
+    final navContext = _navigatorKey.currentContext;
+    final prefs = _storage;
+    if (!mounted || navContext == null || prefs == null) return;
+    final values = <String, Object?>{
+      for (final key in V12BackupCodec.keys)
+        if (prefs.get(key) != null) key: prefs.get(key),
+    };
+    final code = V12BackupCodec.encode(values);
+    await showDialog<void>(
+      context: navContext,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('💾 Oyun yedeğim'),
+        content: const SingleChildScrollView(
+          child: Text('Bölümlerini, yıldızlarını, şeker paranı, '
+              'güçlendiricilerini ve görevlerini yedekle. '
+              'Kopyaladığın yedek kodunu NOTLAR veya e-posta gibi '
+              'oyun dışındaki güvenli bir yere kaydet. '
+              'Uygulamayı kaldırırsan sadece telefondaki kayıt silinebilir.'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: code));
+              if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+              final current = _navigatorKey.currentContext;
+              if (current != null && current.mounted) {
+                ScaffoldMessenger.of(current).showSnackBar(const SnackBar(
+                  content: Text('Yedek kodu kopyalandı. Şimdi Notlar’a yapıştırıp kaydet!'),
+                ));
+              }
+            },
+            child: const Text('KODU KOPYALA'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              _restoreBackupDialog();
+            },
+            child: const Text('YEDEK GERİ YÜKLE'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('KAPAT'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _restoreBackupDialog() async {
+    final navContext = _navigatorKey.currentContext;
+    if (navContext == null || !mounted) return;
+    final controller = TextEditingController();
+    final input = await showDialog<String>(
+      context: navContext,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Yedekten geri yükle'),
+        content: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text('Notlar’a kaydettiğin SB12- ile başlayan kodu yapıştır. '
+                'Onay verene kadar mevcut kayıt değişmeyecek.'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              maxLines: 4,
+              autocorrect: false,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: 'SB12-...',
+              ),
+            ),
+          ]),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('İPTAL'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(controller.text),
+            child: const Text('KODU KONTROL ET'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (!mounted || input == null || input.trim().isEmpty) return;
+    Map<String, Object> parsed;
+    try {
+      parsed = V12BackupCodec.decode(input);
+    } catch (_) {
+      final current = _navigatorKey.currentContext;
+      if (current != null && current.mounted) {
+        ScaffoldMessenger.of(current).showSnackBar(const SnackBar(
+          content: Text('Yedek kodu geçersiz; hiçbir kayıt değiştirilmedi.'),
+        ));
+      }
+      return;
+    }
+    final current = _navigatorKey.currentContext;
+    if (current == null || !current.mounted) return;
+    final approved = await showDialog<bool>(
+      context: current,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Kayıt üzerine yazılsın mı?'),
+        content: Text('Yedekteki ${parsed['unlocked']}. bölüm ilerlemesi '
+            've ödüller bu telefondaki ilerlemenin yerine geçecek. '
+            'İşlem geri alınamaz.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('VAZGEÇ'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('EVET, GERİ YÜKLE'),
+          ),
+        ],
+      ),
+    );
+    if (approved != true || !mounted) return;
+    final prefs = _storage;
+    if (prefs == null) return;
+    for (final key in V12BackupCodec.keys) {
+      final value = parsed[key];
+      if (value == null) {
+        await prefs.remove(key);
+      } else if (value is int) {
+        await prefs.setInt(key, value);
+      } else if (value is bool) {
+        await prefs.setBool(key, value);
+      } else if (value is String) {
+        await prefs.setString(key, value);
+      }
+    }
+    _stars.clear();
+    _game = null;
+    _daily = DailyProgress.fresh(DateTime.now());
+    _v6 = V6Progress();
+    _v7 = V7Progress(today: DateTime.now());
+    _v8 = V8SeasonProgress(today: DateTime.now());
+    _v9 = V9RewardsProgress(today: DateTime.now());
+    await _load();
+    await _audio.setEnabled(_sound);
+    if (!mounted) return;
+    setState(() { _page = ViewPage.home; _result = null; });
+    final after = _navigatorKey.currentContext;
+    if (after != null && after.mounted) {
+      ScaffoldMessenger.of(after).showSnackBar(const SnackBar(
+        content: Text('Yedek geri yüklendi. İlerlemen hazır!'),
+      ));
+    }
   }
 
   Widget _homeMenuButton(IconData icon, String title, VoidCallback action) =>
@@ -1349,7 +1510,7 @@ class _SugarGardenState extends State<SugarGarden>
           _roundIcon(Icons.arrow_back_rounded,
               () => setState(() => _page = ViewPage.home)),
           const SizedBox(width: 12),
-          Expanded(child: Text('Şeker Yolu • V11',
+          Expanded(child: Text('Şeker Yolu • V12',
               style: _titleStyle(27, const Color(0xFFE94E96)))),
           _roundIcon(Icons.emoji_events_rounded, _openEventCenter),
           const SizedBox(width: 6),
@@ -1372,6 +1533,7 @@ class _SugarGardenState extends State<SugarGarden>
     ]);
   }
 
+  /// V12: scenic, winding path with the same level actions and keys as V11.
   Widget _worldPanel(V6World world) {
     final completed = [for (var level = world.start; level <= world.end; level++)
       if ((_stars[level] ?? 0) > 0) level].length;
@@ -1379,70 +1541,85 @@ class _SugarGardenState extends State<SugarGarden>
     final canClaim = _v6.canClaimChest(world.end, _stars);
     return Container(
       key: ValueKey('v6-world-${world.start}'),
-      margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.fromLTRB(12, 15, 12, 15),
+      margin: const EdgeInsets.only(bottom: 19),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        gradient: LinearGradient(colors: [
-          Color(world.primary).withValues(alpha: .96),
-          Color(world.accent).withValues(alpha: .91),
-        ], begin: Alignment.topLeft, end: Alignment.bottomRight),
-        image: const DecorationImage(
-          image: AssetImage('assets/images/v11_map_valley.webp'),
-          fit: BoxFit.cover, opacity: .19,
-        ),
-        border: Border.all(color: const Color(0xFFFFEDAA), width: 3),
-        boxShadow: const [BoxShadow(color: Color(0x553A145C),
-          blurRadius: 8, offset: Offset(0, 5))],
+        borderRadius: BorderRadius.circular(28),
+        color: const Color(0xFFFFE5F5),
+        border: Border.all(color: const Color(0xFFFFE99D), width: 4),
+        boxShadow: const [BoxShadow(color: Color(0x66471662),
+          blurRadius: 17, offset: Offset(0, 8))],
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [
-              Color(0xFFBD7950), Color(0xFF7C422A)]),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFFFDCA2), width: 2),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Column(children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(13, 12, 13, 12),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(colors: [
+                Color(0xFFF177BD), Color(0xFFA74CCA), Color(0xFF7B49A3)])),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('🌸 ${world.name.toUpperCase()}',
+                  style: const TextStyle(color: Colors.white, fontSize: 17,
+                    fontWeight: FontWeight.w900, shadows: [
+                      Shadow(color: Color(0x993B1453), blurRadius: 3, offset: Offset(0, 2))])),
+                Text('${world.subtitle}  •  $completed / 20 tamamlandı',
+                  style: const TextStyle(color: Color(0xFFFFF4D8),
+                    fontWeight: FontWeight.w800, fontSize: 12)),
+              ]),
           ),
-          child: Text('🌸 ${world.name.toUpperCase()}', style: const TextStyle(
-            color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900,
-            shadows: [Shadow(color: Color(0x77000000), blurRadius: 4)])),
-        ),
-        const SizedBox(height: 3),
-        Text('${world.subtitle} • $completed/20 tamamlandı',
-          style: const TextStyle(color: Colors.white, fontSize: 12,
-            fontWeight: FontWeight.w700)),
-        const SizedBox(height: 9),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 5, crossAxisSpacing: 7,
-            mainAxisSpacing: 9, childAspectRatio: .86),
-          itemCount: v6LevelsPerWorld,
-          itemBuilder: (context, index) => _levelNode(world.start + index),
-        ),
-        const SizedBox(height: 9),
-        SizedBox(width: double.infinity,
-          child: OutlinedButton.icon(
-            key: ValueKey('v6-chest-${world.end}'),
-            onPressed: canClaim ? () => _claimWorldChest(world.end) : null,
-            icon: Icon(claimed ? Icons.check_circle_rounded
-              : Icons.inventory_2_rounded),
-            label: Text(claimed ? 'DÜNYA SANDIĞI ALINDI ✓'
-                : canClaim ? 'DÜNYA SANDIĞINI AÇ  +150 🍬'
-                : 'SANDIK: ${world.end}. BÖLÜMÜ BİTİR'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF6D277B),
-              backgroundColor: const Color(0xF5FFFFFF),
-              disabledForegroundColor: const Color(0xFF755481),
-              disabledBackgroundColor: const Color(0x99FFFFFF),
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
+          SizedBox(height: V12PathGeometry.height,
+            child: LayoutBuilder(builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              return Stack(children: [
+                const Positioned.fill(child: Image(
+                  image: AssetImage('assets/images/v11_map_valley.webp'),
+                  fit: BoxFit.cover,
+                )),
+                const Positioned.fill(child: DecoratedBox(
+                  decoration: BoxDecoration(gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0x18FFFFFF), Color(0x14FFE6AA), Color(0x28D6F18F)])),
+                )),
+                const Positioned.fill(child: IgnorePointer(
+                  child: CustomPaint(painter: V12RoadPainter()),
+                )),
+                for (var i = 0; i < v6LevelsPerWorld; i++)
+                  Positioned(
+                    left: V12PathGeometry.levelCenter(i, width).dx - 31,
+                    top: V12PathGeometry.levelCenter(i, width).dy - 31,
+                    width: 62,
+                    height: 72,
+                    child: _levelNode(world.start + i),
+                  ),
+              ]);
+            }),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(11, 13, 11, 14),
+            child: SizedBox(width: double.infinity,
+              child: OutlinedButton.icon(
+                key: ValueKey('v6-chest-${world.end}'),
+                onPressed: canClaim ? () => _claimWorldChest(world.end) : null,
+                icon: Icon(claimed ? Icons.check_circle_rounded : Icons.inventory_2_rounded),
+                label: Text(claimed ? 'DÜNYA SANDIĞI ALINDI ✓'
+                    : canClaim ? 'DÜNYA SANDIĞINI AÇ  +150 🍬'
+                    : 'SANDIK: ${world.end}. BÖLÜMÜ BİTİR'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF713180),
+                  backgroundColor: const Color(0xFFFFF2D9),
+                  disabledForegroundColor: const Color(0xFF755481),
+                  disabledBackgroundColor: const Color(0xFFEBD4EE),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
+                ),
+              ),
             ),
           ),
-        ),
-      ]),
+        ]),
+      ),
     );
   }
 
@@ -1498,7 +1675,7 @@ class _SugarGardenState extends State<SugarGarden>
               const SizedBox(width: 10),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                Text('BÖLÜM ${g.level}  •  V11', style: const TextStyle(
+                Text('BÖLÜM ${g.level}  •  V12', style: const TextStyle(
                     fontSize: 12, fontWeight: FontWeight.w900,
                     letterSpacing: 1.6, color: Color(0xFF77328B))),
                 Text(g.plan.name, maxLines: 1,
