@@ -1,7 +1,7 @@
 name: seker_bahcesi
 description: Ozgun, animasyonlu, bolumlu Turkce seker eslestirme oyunu.
 publish_to: 'none'
-version: 2.3.0+14
+version: 2.4.0+15
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
@@ -22,6 +22,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/audio/
+    - assets/images/
 
 flutter_launcher_icons:
   android: true

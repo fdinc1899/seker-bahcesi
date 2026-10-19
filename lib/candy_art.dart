@@ -26,10 +26,69 @@ class CandyPiece extends StatelessWidget {
   final SpecialKind special;
 
   @override
-  Widget build(BuildContext context) => CustomPaint(
+  Widget build(BuildContext context) {
+    final path = special == SpecialKind.colorBomb
+        ? 'assets/images/candy_bomb.png'
+        : 'assets/images/candy_${type % candyPalette.length}.png';
+    final sprite = Image.asset(
+      path,
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.high,
+      gaplessPlayback: true,
+      errorBuilder: (context, error, stackTrace) => CustomPaint(
         size: Size.square(size),
         painter: CandyPainter(type, special),
-      );
+      ),
+    );
+    return SizedBox.square(
+      dimension: size,
+      child: Stack(fit: StackFit.expand, children: [
+        sprite,
+        if (special == SpecialKind.horizontal ||
+            special == SpecialKind.vertical)
+          CustomPaint(painter: _V11StripeOverlay(special)),
+      ]),
+    );
+  }
+
+}
+
+/// Transparent gold/white stripes over the V11 high-resolution candy sprite.
+class _V11StripeOverlay extends CustomPainter {
+  const _V11StripeOverlay(this.kind);
+  final SpecialKind kind;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    canvas.save();
+    canvas.scale(size.width / 100, size.height / 100);
+    final horizontal = kind == SpecialKind.horizontal;
+    final band = horizontal
+        ? const Rect.fromLTWH(11, 39, 78, 22)
+        : const Rect.fromLTWH(39, 11, 22, 78);
+    final outer = RRect.fromRectAndRadius(band, const Radius.circular(10));
+    canvas.drawRRect(outer, Paint()..color = const Color(0xDFFFEE95)
+      ..style = PaintingStyle.stroke..strokeWidth = 3.6);
+    canvas.drawRRect(outer, Paint()..shader = const LinearGradient(
+      colors: [Color(0xFFFFFAFF), Color(0xFFFF8DBF), Color(0xFFFFFFFF)],
+    ).createShader(band));
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(horizontal
+          ? const Rect.fromLTWH(18, 46, 64, 7)
+          : const Rect.fromLTWH(46, 18, 7, 64), const Radius.circular(6)),
+      Paint()..color = const Color(0xCFFFFFFF),
+    );
+    canvas.drawCircle(const Offset(50, 50), 7,
+      Paint()..color = const Color(0xFFFFD843));
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _V11StripeOverlay oldDelegate) =>
+      kind != oldDelegate.kind;
 }
 
 /// High-contrast glass candy with soft internal lighting and faceted highlights.
