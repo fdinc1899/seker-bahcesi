@@ -1210,10 +1210,10 @@ class _SugarGardenState extends State<SugarGarden>
             Positioned.fill(
               child: Image.asset(
                 _page == ViewPage.map
-                    ? 'assets/images/v11_map_valley.webp'
-                    : 'assets/images/v11_candy_valley.webp',
+                    ? 'assets/images/v13_map_scene.webp'
+                    : 'assets/images/v13_home_scene.webp',
                 fit: BoxFit.cover,
-                filterQuality: FilterQuality.medium,
+                filterQuality: FilterQuality.high,
                 errorBuilder: (context, error, stackTrace) =>
                     const CustomPaint(painter: SceneryPainter()),
               ),
@@ -1224,7 +1224,7 @@ class _SugarGardenState extends State<SugarGarden>
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   stops: [0, .38, 1],
-                  colors: [Color(0x10FFFFFF), Color(0x00FFFFFF), Color(0x28FFCAEA)],
+                  colors: [Color(0x08FFFFFF), Color(0x00FFFFFF), Color(0x0CFFCAEA)],
                 ),
               ),
             )),
@@ -1271,9 +1271,9 @@ class _SugarGardenState extends State<SugarGarden>
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               begin: Alignment.topLeft, end: Alignment.bottomRight,
-              colors: [Color(0xFF8C4F2F), Color(0xFFAD7244), Color(0xFF6C342A)]),
+              colors: [Color(0xFFCE9051), Color(0xFF96542D), Color(0xFF61351F)]),
             borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: const Color(0xFFFFEAA0), width: 5),
+            border: Border.all(color: const Color(0xFFFFECAA), width: 5),
             boxShadow: const [
               BoxShadow(color: Color(0x774D1951), blurRadius: 24,
                   offset: Offset(0, 13)),
@@ -1289,7 +1289,7 @@ class _SugarGardenState extends State<SugarGarden>
             Text('Bahçesi', textAlign: TextAlign.center,
               style: _titleStyle(compact ? 45 : 54, const Color(0xFFFFC642))),
             const SizedBox(height: 3),
-            const Text('MASALSI YOL + YEDEKLEME • V12',
+            const Text('ULTRA NET GÖRSELLER • V13',
               style: TextStyle(color: Color(0xFFFFF2D7), fontSize: 10,
                   fontWeight: FontWeight.w900, letterSpacing: 1.6)),
           ]),
@@ -1510,7 +1510,7 @@ class _SugarGardenState extends State<SugarGarden>
           _roundIcon(Icons.arrow_back_rounded,
               () => setState(() => _page = ViewPage.home)),
           const SizedBox(width: 12),
-          Expanded(child: Text('Şeker Yolu • V12',
+          Expanded(child: Text('Şeker Yolu • V13',
               style: _titleStyle(27, const Color(0xFFE94E96)))),
           _roundIcon(Icons.emoji_events_rounded, _openEventCenter),
           const SizedBox(width: 6),
@@ -1545,7 +1545,7 @@ class _SugarGardenState extends State<SugarGarden>
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
         color: const Color(0xFFFFE5F5),
-        border: Border.all(color: const Color(0xFFFFE99D), width: 4),
+        border: Border.all(color: const Color(0xFFFFE4A0), width: 5),
         boxShadow: const [BoxShadow(color: Color(0x66471662),
           blurRadius: 17, offset: Offset(0, 8))],
       ),
@@ -1557,7 +1557,7 @@ class _SugarGardenState extends State<SugarGarden>
             padding: const EdgeInsets.fromLTRB(13, 12, 13, 12),
             decoration: const BoxDecoration(
               gradient: LinearGradient(colors: [
-                Color(0xFFF177BD), Color(0xFFA74CCA), Color(0xFF7B49A3)])),
+                Color(0xFFFF8DC0), Color(0xFFE047A6), Color(0xFF9639A7)])),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('🌸 ${world.name.toUpperCase()}',
@@ -1574,14 +1574,15 @@ class _SugarGardenState extends State<SugarGarden>
               final width = constraints.maxWidth;
               return Stack(children: [
                 const Positioned.fill(child: Image(
-                  image: AssetImage('assets/images/v11_map_valley.webp'),
+                  image: AssetImage('assets/images/v13_map_scene.webp'),
                   fit: BoxFit.cover,
+                  filterQuality: FilterQuality.high,
                 )),
                 const Positioned.fill(child: DecoratedBox(
                   decoration: BoxDecoration(gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Color(0x18FFFFFF), Color(0x14FFE6AA), Color(0x28D6F18F)])),
+                    colors: [Color(0x06FFFFFF), Color(0x06FFE6AA), Color(0x09D6F18F)])),
                 )),
                 const Positioned.fill(child: IgnorePointer(
                   child: CustomPaint(painter: V12RoadPainter()),
@@ -1635,13 +1636,12 @@ class _SugarGardenState extends State<SugarGarden>
             shape: BoxShape.circle,
             gradient: unlocked ? const LinearGradient(
               begin: Alignment.topLeft, end: Alignment.bottomRight,
-              colors: [Color(0xFFFFD0E9), Color(0xFFFF55A8), Color(0xFFD42F93)])
+              colors: [Color(0xFFFFDFF0), Color(0xFFFF57AF), Color(0xFFD51979)])
                 : const LinearGradient(colors: [Color(0xFF8F839B),
                     Color(0xFF665878)]),
-            border: Border.all(color: const Color(0xFFFFEDAA), width: 2.8),
-            boxShadow: const [BoxShadow(color: Color(0x77381861),
-                blurRadius: 9, offset: Offset(0, 4)),
-                BoxShadow(color: Color(0x44FFFFFF), blurRadius: 5)],
+            border: Border.all(color: const Color(0xFFFFF1A8), width: 3.3),
+            boxShadow: const [BoxShadow(color: Color(0xB15E1762), blurRadius: 12, offset: Offset(0, 6)),
+                BoxShadow(color: Color(0x88FFFFFF), blurRadius: 8, offset: Offset(0, -2))],
           ),
           child: Center(child: unlocked
             ? Text('$level', style: const TextStyle(
@@ -1675,7 +1675,7 @@ class _SugarGardenState extends State<SugarGarden>
               const SizedBox(width: 10),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                Text('BÖLÜM ${g.level}  •  V12', style: const TextStyle(
+                Text('BÖLÜM ${g.level}  •  V13', style: const TextStyle(
                     fontSize: 12, fontWeight: FontWeight.w900,
                     letterSpacing: 1.6, color: Color(0xFF77328B))),
                 Text(g.plan.name, maxLines: 1,
@@ -1699,7 +1699,7 @@ class _SugarGardenState extends State<SugarGarden>
                 vertical: compact ? 7 : 12),
             decoration: BoxDecoration(
               gradient: const LinearGradient(colors: [
-                Color(0xFFFFF6D9), Color(0xFFFFDECF), Color(0xFFFFEFF0)]),
+                Color(0xFFFFFFFF), Color(0xFFFFF1D7), Color(0xFFFFDCEB)]),
               borderRadius: BorderRadius.circular(25),
               border: Border.all(color: const Color(0xFFFFEBA9), width: 3),
               boxShadow: const [BoxShadow(color: Color(0x309D359E),
@@ -1828,9 +1828,9 @@ class _SugarGardenState extends State<SugarGarden>
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft, end: Alignment.bottomRight,
-          colors: [Color(0xFFFFECAA), Color(0xFFE99D73), Color(0xFFC6855C)]),
+          colors: [Color(0xFFFFECA7), Color(0xFFFFC95C), Color(0xFFE69A43)]),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: const Color(0xFFFFF2B8), width: 6),
+        border: Border.all(color: const Color(0xFFFFF7CF), width: 6),
         boxShadow: const [
           BoxShadow(color: Color(0x994D167A), blurRadius: 22, offset: Offset(0, 12)),
           BoxShadow(color: Color(0xAAFFFFFF), blurRadius: 6,
@@ -1842,7 +1842,7 @@ class _SugarGardenState extends State<SugarGarden>
           const Positioned.fill(child: DecoratedBox(
             decoration: BoxDecoration(gradient: RadialGradient(
               center: Alignment(-.55, -.8), radius: 1.5,
-              colors: [Color(0xFF6F83CC), Color(0xFF405CA9), Color(0xFF263D7A)],
+              colors: [Color(0xFF5676B7), Color(0xFF284C87), Color(0xFF132D57)],
             )),
           )),
           ...[for (var r = 0; r < gridSize; r++)
@@ -1856,11 +1856,11 @@ class _SugarGardenState extends State<SugarGarden>
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: (r + c).isEven
-                        ? const [Color(0xFF748BCC), Color(0xFF4F65A7)]
-                        : const [Color(0xFF6982C2), Color(0xFF395492)],
+                        ? const [Color(0xFF5274AD), Color(0xFF294C84)]
+                        : const [Color(0xFF476BA9), Color(0xFF234476)],
                     ),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0x77D3DEFF), width: .9),
+                    border: Border.all(color: const Color(0xA2ABC9FC), width: 1.1),
                   ),
                 ),
               ),
@@ -2115,13 +2115,13 @@ class _SugarGardenState extends State<SugarGarden>
               decoration: BoxDecoration(
                 gradient: LinearGradient(begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color.lerp(color, Colors.white, .26)!, color]),
-                borderRadius: BorderRadius.circular(18),
+                    colors: [Color.lerp(color, Colors.white, .55)!, color, Color.lerp(color, Colors.black, .12)!]),
+                borderRadius: BorderRadius.circular(21),
                 border: Border.all(color: active
                     ? const Color(0xFFFFFF58) : const Color(0xFFFFEC9C),
                     width: active ? 4 : 2.8),
-                boxShadow: const [BoxShadow(color: Color(0x559E4093),
-                    blurRadius: 7, offset: Offset(0, 4))],
+                boxShadow: const [BoxShadow(color: Color(0x889E4093),
+                    blurRadius: 13, offset: Offset(0, 6))],
               ),
               child: Icon(icon, color: Colors.white, size: 31,
                 shadows: const [Shadow(color: Color(0x555C206F),

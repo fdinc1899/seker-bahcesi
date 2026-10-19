@@ -32,26 +32,26 @@ class V12RoadPainter extends CustomPainter {
     }
     canvas.drawPath(path, Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 37
+      ..strokeWidth = 43
       ..strokeCap = StrokeCap.round
-      ..color = const Color(0x884A2651));
+      ..color = const Color(0xAA794657));
     canvas.drawPath(path, Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 30
+      ..strokeWidth = 34
       ..strokeCap = StrokeCap.round
-      ..color = const Color(0xFFFFE5AA));
+      ..color = const Color(0xFFFFD78D));
     canvas.drawPath(path, Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 23
+      ..strokeWidth = 27
       ..strokeCap = StrokeCap.round
-      ..color = const Color(0xFFFFF7D9));
+      ..color = const Color(0xFFFFF2CB));
     canvas.drawPath(path, Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
+      ..strokeWidth = 3
       ..strokeCap = StrokeCap.round
       ..color = const Color(0xFFFFC777));
 
-    final flower = Paint()..color = const Color(0xFFE849A4);
+    final flower = Paint()..color = const Color(0xFFFF5EA4);
     final middle = Paint()..color = const Color(0xFFFFD55D);
     for (var i = 0; i < 36; i++) {
       final x = size.width * (.09 + .82 * ((i * 17 % 101) / 101));
