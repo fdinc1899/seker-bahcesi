@@ -118,7 +118,7 @@ class _LevelResultOverlayState extends State<LevelResultOverlay>
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFFFFFFF), Color(0xFFFFE6F5)],
+          colors: [Color(0xFFFFFFFF), Color(0xFFFFF0F7), Color(0xFFFFE2F0)],
         ),
         borderRadius: BorderRadius.circular(30),
         border: Border.all(color: const Color(0xFFFFE08A), width: 4),
@@ -134,7 +134,7 @@ class _LevelResultOverlayState extends State<LevelResultOverlay>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(win ? 'TEBRİKLER!' : 'TEKRAR DENE!',
+          Text(win ? 'MÜKEMMEL!' : 'TEKRAR DENE!',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: win ? const Color(0xFFE8338A) :
@@ -148,7 +148,7 @@ class _LevelResultOverlayState extends State<LevelResultOverlay>
                 ],
               )),
           const SizedBox(height: 4),
-          Text(win ? 'ŞEKER ŞÖLENİ!' : 'YENİDEN BAŞARABİLİRSİN',
+          Text(win ? 'TATLI ZAFER!' : 'YENİDEN BAŞARABİLİRSİN',
               style: const TextStyle(
                 letterSpacing: 1.1,
                 fontSize: 11,
@@ -265,7 +265,7 @@ class _LevelResultOverlayState extends State<LevelResultOverlay>
             width: double.infinity,
             decoration: BoxDecoration(
               gradient: const LinearGradient(colors: [
-                Color(0xFFFFC14D), Color(0xFFFF763E),
+                Color(0xFFFFD85B), Color(0xFFFF8C47),
               ]),
               border: Border.all(color: const Color(0xFFFFE9A8), width: 3),
               borderRadius: BorderRadius.circular(19),

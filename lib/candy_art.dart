@@ -284,7 +284,7 @@ class SceneryPainter extends CustomPainter {
           ..shader = const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF80E6FF), Color(0xFFFFD6EE), Color(0xFFFF97CA)],
+            colors: [Color(0xFF8DEBFF), Color(0xFFFFD9F1), Color(0xFFFFA0C7)],
             stops: [0, .57, 1],
           ).createShader(bounds));
 
@@ -327,9 +327,20 @@ class SceneryPainter extends CustomPainter {
         ..close();
       canvas.drawPath(path, Paint()..color = color);
     }
-    hill(size.height * .78, const Color(0xFFC4F6AF), 67);
-    hill(size.height * .86, const Color(0xFF86DFA1), 51);
-    hill(size.height * .94, const Color(0xFF55C89E), 39);
+    hill(size.height * .76, const Color(0xFFD1F7A2), 71);
+    hill(size.height * .84, const Color(0xFF9AE7A8), 53);
+    hill(size.height * .92, const Color(0xFF67D3B0), 41);
+
+    final river = Path()
+      ..moveTo(size.width * .12, size.height)
+      ..quadraticBezierTo(size.width * .20, size.height * .88, size.width * .30, size.height * .83)
+      ..quadraticBezierTo(size.width * .43, size.height * .77, size.width * .56, size.height * .82)
+      ..quadraticBezierTo(size.width * .72, size.height * .89, size.width * .80, size.height)
+      ..close();
+    canvas.drawPath(river, Paint()..shader = LinearGradient(
+      begin: Alignment.topCenter, end: Alignment.bottomCenter,
+      colors: [const Color(0xAAFFFFFF), const Color(0x66AEEAFF), const Color(0x44FFFFFF)],
+    ).createShader(Offset.zero & size));
 
     // Fixed floating sugar specks: colorful but inexpensive during gameplay.
     for (var i = 0; i < 18; i++) {
