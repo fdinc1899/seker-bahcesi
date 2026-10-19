@@ -9,6 +9,8 @@ import 'game_engine.dart';
 import 'game_audio.dart';
 import 'v5_fx.dart';
 import 'v6_progress.dart';
+import 'v7_events.dart';
+import 'v8_season.dart';
 import 'level_result.dart';
 import 'reward_rules.dart';
 import 'daily_rewards.dart';
@@ -48,6 +50,8 @@ class _SugarGardenState extends State<SugarGarden>
   bool _threeStarPrize = false;
   DailyProgress _daily = DailyProgress.fresh(DateTime.now());
   V6Progress _v6 = V6Progress();
+  V7Progress _v7 = V7Progress(today: DateTime.now());
+  V8SeasonProgress _v8 = V8SeasonProgress(today: DateTime.now());
   PowerMode _power = PowerMode.none;
   Cell? _selected;
   Cell? _dragStart;
@@ -88,6 +92,10 @@ class _SugarGardenState extends State<SugarGarden>
     } else if (state == AppLifecycleState.resumed) {
       _audio.resumeMusic();
       _daily.advance(DateTime.now());
+      setState(() {
+        _v7.advance(DateTime.now());
+        _v8.advance(DateTime.now());
+      });
       _save();
     }
   }
@@ -118,6 +126,26 @@ class _SugarGardenState extends State<SugarGarden>
             Map<String, dynamic>.from(jsonDecode(savedV6) as Map));
         } catch (_) {
           _v6 = V6Progress();
+        }
+      }
+      final v7Data = prefs.getString('v7Progress');
+      if (v7Data != null) {
+        try {
+          _v7 = V7Progress.fromJson(
+              Map<String, dynamic>.from(jsonDecode(v7Data) as Map),
+              DateTime.now());
+        } catch (_) {
+          _v7 = V7Progress(today: DateTime.now());
+        }
+      }
+      final v8Data = prefs.getString('v8Season');
+      if (v8Data != null) {
+        try {
+          _v8 = V8SeasonProgress.fromJson(
+              Map<String, dynamic>.from(jsonDecode(v8Data) as Map),
+              DateTime.now());
+        } catch (_) {
+          _v8 = V8SeasonProgress(today: DateTime.now());
         }
       }
       final progress = prefs.getString('stars');
@@ -162,6 +190,8 @@ class _SugarGardenState extends State<SugarGarden>
     await prefs.setInt('shuffles', _shuffles);
     await prefs.setString('dailyProgressV2', jsonEncode(_daily.toJson()));
     await prefs.setString('v6Progress', jsonEncode(_v6.toJson()));
+    await prefs.setString('v7Progress', jsonEncode(_v7.toJson()));
+    await prefs.setString('v8Season', jsonEncode(_v8.toJson()));
     final g = _game;
     if (g != null && g.moves > 0 && !g.won) {
       await prefs.setString('session', jsonEncode(g.toJson()));
@@ -282,6 +312,8 @@ class _SugarGardenState extends State<SugarGarden>
               (cell.col + .5) * _boardCell + 5,
               (cell.row + .5) * _boardCell + 5))
           .toList();
+      final matchedCandyTypes = matched.map((cell) =>
+          g.board[cell.row][cell.col]?.type).whereType<int>().toList();
       _burstColors = matched.map((cell) {
         final candy = g.board[cell.row][cell.col];
         return candyPalette[candy?.type ?? 0];
@@ -314,6 +346,7 @@ class _SugarGardenState extends State<SugarGarden>
         damagedChocolate = true;
       }
       g.clear(matched, chain);
+      _v8.recordWave(matchedCandyTypes, chain, DateTime.now());
       if (damaged > 0 && chain == 1) {
         _message = 'ENGEL KIRILDI!';
       }
@@ -344,6 +377,8 @@ class _SugarGardenState extends State<SugarGarden>
     }
     if (g.won) {
       _daily.registerWin(DateTime.now());
+      _v7.recordWin(g.level, DateTime.now());
+      _v8.recordWin(g.level, DateTime.now());
       // The existing best-stars save key prevents repeat reward farming.
       final previousBest = _stars[g.level] ?? 0;
       final earned = g.stars;
@@ -712,6 +747,265 @@ class _SugarGardenState extends State<SugarGarden>
     }
   }
 
+  // V7: Offline weekly milestones and collectible achievement badges.
+  // Rewards credit the existing V6 economy; never modify older save formats.
+  void _grantV7Prize(V7Reward prize) {
+    _v6.coins += prize.coins;
+    _hammers += prize.hammers;
+    _shuffles += prize.shuffles;
+  }
+
+  void _claimV7Week(int index, StateSetter refresh) {
+    final prize = _v7.claimWeekly(index, DateTime.now());
+    if (prize == null) return;
+    setState(() => _grantV7Prize(prize));
+    refresh(() {});
+    _audio.play(CandySound.win);
+    _save();
+  }
+
+  void _claimV7Badge(V7Badge badge, StateSetter refresh) {
+    final prize = _v7.claimBadge(badge, _stars);
+    if (prize == null) return;
+    setState(() => _grantV7Prize(prize));
+    refresh(() {});
+    _audio.play(CandySound.win);
+    _save();
+  }
+
+  void _openEventCenter() {
+    final navContext = _navigatorKey.currentContext;
+    if (navContext == null) return;
+    setState(() {
+      _v7.advance(DateTime.now());
+      _v8.advance(DateTime.now());
+    });
+    _fx();
+    showModalBottomSheet<void>(
+      context: navContext,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFFFFF4FD),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26))),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, refresh) => SafeArea(child: SizedBox(
+          height: MediaQuery.sizeOf(context).height * .78,
+          child: Column(children: [
+            const SizedBox(height: 16),
+            const Text('🏆 ETKİNLİK MERKEZİ  •  V8',
+              key: ValueKey('v7-event-center'),
+              style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900,
+                  color: Color(0xFF88349C))),
+            const SizedBox(height: 5),
+            Text('🍬 ${_v6.coins}  •  Haftanın başlangıcı: ${_v7.week}',
+              style: const TextStyle(fontWeight: FontWeight.w700,
+                  color: Color(0xFF8B5694))),
+            const Divider(height: 22),
+            Expanded(child: ListView(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 20),
+              children: [
+                _v8SeasonCard(refresh),
+                const SizedBox(height: 18),
+                const Text('HAFTALIK ŞEKER YARIŞI',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900,
+                      color: Color(0xFF8337A0))),
+                const SizedBox(height: 3),
+                Text('Bu hafta ${_v7.completedThisWeek.length} farklı bölüm tamamladın. '
+                  'Her Pazartesi yeni hedefler başlar.',
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF754B80))),
+                const SizedBox(height: 8),
+                for (var index = 0; index < v7WeeklyTiers.length; index++)
+                  _v7WeeklyTile(index, refresh),
+                const SizedBox(height: 20),
+                const Text('BAŞARIM KOLEKSİYONU',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900,
+                      color: Color(0xFF8337A0))),
+                const SizedBox(height: 4),
+                const Text('Kazandığın yıldızlar ve bölümler kalıcı olarak sayılır.',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF754B80))),
+                const SizedBox(height: 6),
+                for (final badge in v7Badges)
+                  _v7BadgeTile(badge, refresh),
+                const SizedBox(height: 8),
+                const Text('Bu etkinlik cihaz üzerinde çalışır; çevrim içi liderlik tablosu yoktur.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 11, color: Color(0xFF85648B))),
+              ],
+            )),
+          ]),
+        )),
+      ),
+    );
+  }
+
+  // V8: rotating seasonal color hunt, chain-combo and unique-level missions.
+  void _claimV8Mission(V8Mission mission, StateSetter refresh) {
+    final reward = _v8.claim(mission, DateTime.now());
+    if (reward == null) return;
+    setState(() {
+      _v6.coins += reward.coins;
+      _hammers += reward.hammers;
+      _shuffles += reward.shuffles;
+    });
+    refresh(() {});
+    _audio.play(CandySound.win);
+    _save();
+  }
+
+  Widget _v8SeasonCard(StateSetter refresh) {
+    const labels = <V8Mission, String>{
+      V8Mission.colorHunt: 'HEDEF RENKTE ŞEKER TOPLA',
+      V8Mission.combos: 'ZİNCİR KOMBO YAP (x2+)',
+      V8Mission.levelWins: 'FARKLI BÖLÜM TAMAMLA',
+    };
+    final color = candyPalette[_v8.targetType];
+    return Container(
+      key: const ValueKey('v8-season-center'),
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        gradient: const LinearGradient(colors: [
+          Color(0xFFFCE2FF), Color(0xFFFFF0D0),
+        ]),
+        border: Border.all(color: const Color(0xFFE8B0EE), width: 1.5),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('🌈 SEZONLUK RENK AVI  •  V8',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900,
+              color: Color(0xFF873599))),
+        const SizedBox(height: 4),
+        Text('Sezon: ${_v8.season}  •  Hedef: ${v8ColorNames[_v8.targetType]}',
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800,
+              color: Color(0xFF87517F))),
+        const SizedBox(height: 7),
+        Row(children: [
+          const Text('BU AYIN ŞEKERİ  ', style: TextStyle(
+            fontWeight: FontWeight.w700, fontSize: 12)),
+          Container(key: const ValueKey('v8-season-color'),
+            width: 25, height: 25,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2)),
+          ),
+          const SizedBox(width: 8),
+          const Expanded(child: Text('Şekerleri patlat, görevleri bitir!',
+            style: TextStyle(fontSize: 11))),
+        ]),
+        for (final plan in v8Missions) ...[
+          const SizedBox(height: 10),
+          Row(children: [
+            Expanded(child: Text(labels[plan.mission]!,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900,
+                  color: Color(0xFF743C7D)))),
+            Text('${_v8.progressFor(plan.mission).clamp(0, plan.goal)}/${plan.goal}',
+              style: const TextStyle(fontSize: 11,
+                  fontWeight: FontWeight.w800)),
+          ]),
+          const SizedBox(height: 4),
+          LinearProgressIndicator(
+            value: (_v8.progressFor(plan.mission) / plan.goal)
+                .clamp(0.0, 1.0).toDouble(),
+            minHeight: 7, backgroundColor: const Color(0xFFE8D8E8),
+            color: color,
+          ),
+          Row(children: [
+            Expanded(child: Text('+${plan.reward.coins} 🍬'
+              '${plan.reward.hammers > 0 ? '  +${plan.reward.hammers} çekiç' : ''}'
+              '${plan.reward.shuffles > 0 ? '  +${plan.reward.shuffles} karıştır' : ''}',
+              style: const TextStyle(fontSize: 11,
+                  color: Color(0xFF71477D)))),
+            TextButton(
+              key: ValueKey('v8-claim-${plan.mission.name}'),
+              onPressed: _v8.canClaim(plan.mission, DateTime.now())
+                  ? () => _claimV8Mission(plan.mission, refresh) : null,
+              child: Text(_v8.claimed.contains(plan.mission) ? 'ALINDI ✓' : 'ÖDÜLÜ AL'),
+            ),
+          ]),
+        ],
+        const Text('Ay değiştiğinde yeni sezon başlar. Çevrim dışı oynanır.',
+          style: TextStyle(fontSize: 11, color: Color(0xFF79547C))),
+      ]),
+    );
+  }
+
+  Widget _v7WeeklyTile(int index, StateSetter refresh) {
+    final tier = v7WeeklyTiers[index];
+    final done = _v7.claimedWeeklyTiers.contains(index);
+    final canClaim = _v7.canClaimWeekly(index, DateTime.now());
+    final progress = _v7.completedThisWeek.length;
+    final label = '${tier.reward.coins} 🍬'
+        '${tier.reward.hammers > 0 ? '  •  +${tier.reward.hammers} çekiç' : ''}'
+        '${tier.reward.shuffles > 0 ? '  •  +${tier.reward.shuffles} karıştırma' : ''}';
+    return Card(color: Colors.white, margin: const EdgeInsets.only(top: 8),
+      child: Padding(padding: const EdgeInsets.all(11), child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Expanded(child: Text('${tier.goal} FARKLI BÖLÜM',
+              style: const TextStyle(fontWeight: FontWeight.w900,
+                  color: Color(0xFF78398E)))),
+            Text('${progress.clamp(0, tier.goal)}/${tier.goal}',
+              style: const TextStyle(fontWeight: FontWeight.w800)),
+          ]),
+          const SizedBox(height: 7),
+          LinearProgressIndicator(
+            value: (progress / tier.goal).clamp(0.0, 1.0).toDouble(),
+            minHeight: 7, backgroundColor: const Color(0xFFF3E4F5),
+            color: const Color(0xFFE979C3)),
+          const SizedBox(height: 7),
+          Row(children: [
+            Expanded(child: Text(label,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF88568C)))),
+            TextButton(
+              key: ValueKey('v7-weekly-$index'),
+              onPressed: canClaim ? () => _claimV7Week(index, refresh) : null,
+              child: Text(done ? 'ALINDI ✓' : 'ÖDÜLÜ AL'),
+            ),
+          ]),
+        ],
+      )),
+    );
+  }
+
+  Widget _v7BadgeTile(V7Badge badge, StateSetter refresh) {
+    final progress = v7BadgeProgress(badge, _stars);
+    final done = _v7.claimedBadges.contains(badge.id);
+    final canClaim = _v7.canClaimBadge(badge, _stars);
+    return Card(color: Colors.white, margin: const EdgeInsets.only(top: 8),
+      child: Padding(padding: const EdgeInsets.all(11), child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            const Icon(Icons.workspace_premium_rounded,
+              color: Color(0xFFF5B54F)),
+            const SizedBox(width: 8),
+            Expanded(child: Text(badge.title,
+              style: const TextStyle(fontWeight: FontWeight.w900,
+                  color: Color(0xFF78398E)))),
+            Text('${progress.clamp(0, badge.goal)}/${badge.goal}',
+              style: const TextStyle(fontWeight: FontWeight.w800)),
+          ]),
+          Text(badge.description,
+            style: const TextStyle(fontSize: 12, color: Color(0xFF775780))),
+          const SizedBox(height: 7),
+          LinearProgressIndicator(
+            value: (progress / badge.goal).clamp(0.0, 1.0).toDouble(),
+            minHeight: 6, backgroundColor: const Color(0xFFF3E4F5),
+            color: const Color(0xFFEFB859)),
+          Row(children: [
+            Expanded(child: Text('+${badge.reward.coins} 🍬',
+              style: const TextStyle(fontWeight: FontWeight.w700,
+                  color: Color(0xFF88568C)))),
+            TextButton(
+              key: ValueKey('v7-badge-${badge.id}'),
+              onPressed: canClaim ? () => _claimV7Badge(badge, refresh) : null,
+              child: Text(done ? 'ALINDI ✓' : 'ROZETİ AL'),
+            ),
+          ]),
+        ],
+      )),
+    );
+  }
+
   void _howToPlay() {
     final navContext = _navigatorKey.currentContext;
     if (navContext == null) return;
@@ -736,10 +1030,13 @@ class _SugarGardenState extends State<SugarGarden>
           '• Çekiç, satır patlatma ve karıştırma güçlerini kullan.\n\n'
           '• Günlük hediye ve görevler için ana ekrandaki hediye simgesini aç.\n\n'
           '• Başarılı olduğunda yeni bölümler açılır.\n\n'
-          '• V6: 120 bölüm ve 6 dünya var. İlk 60 bölüm korunur.\n\n'
+          '• V7: 120 bölüm ve 6 dünya devam ediyor.\n\n'
           '• İlk defa kazandığın yıldızlar şeker parası kazandırır.\n\n'
           '• Şeker dükkânından oyun parasıyla güçlendirici al.\n\n'
-          '• Her 20. bölümü bitirince haritadaki dünya sandığını aç.',
+          '• Her 20. bölümü bitirince haritadaki dünya sandığını aç.\n\n'
+          '• V7 etkinlik merkezi: Haftada farklı bölümler kazanıp ödül al.\n\n'
+          '• V8 sezonluk renk avında hedef renkteki şekerleri topla, kombo yap ve bölüm bitir.\n\n'
+          '• Başarım rozetlerini yıldız ve bölüm hedefleriyle aç.',
           style: TextStyle(height: 1.35, fontSize: 15),
         ),
         actions: [
@@ -801,10 +1098,14 @@ class _SugarGardenState extends State<SugarGarden>
             const SizedBox(width: 8),
             Tooltip(message: 'Şeker dükkânı',
               child: _roundIcon(Icons.storefront_rounded, _openShop)),
+            const SizedBox(width: 6),
+            Tooltip(message: 'Haftalık etkinlik ve başarımlar',
+              child: _roundIcon(Icons.emoji_events_rounded, _openEventCenter)),
             const Spacer(),
-            _pill('★ ${_stars.values.fold<int>(0, (a, b) => a + b)}',
-                const Color(0xFFEF8C19)),
-            const SizedBox(width: 9),
+            Text('★ ${_stars.values.fold<int>(0, (a, b) => a + b)}',
+                style: const TextStyle(fontWeight: FontWeight.w900,
+                  color: Color(0xFFEF8C19))),
+            const SizedBox(width: 7),
             _roundIcon(_sound ? Icons.volume_up_rounded : Icons.volume_off_rounded,
                 _toggleSound),
           ]),
@@ -833,7 +1134,7 @@ class _SugarGardenState extends State<SugarGarden>
         Text('BAHÇESİ', textAlign: TextAlign.center,
             style: _titleStyle(compact ? 51 : 62, const Color(0xFF8233CB))),
         const SizedBox(height: 13),
-        const Text('TATLI EŞLEŞMELERİN DÜNYASI • V6',
+        const Text('TATLI EŞLEŞMELERİN DÜNYASI • V8',
             textAlign: TextAlign.center,
             style: TextStyle(color: Color(0xFF784184), fontSize: 12,
                 fontWeight: FontWeight.w900, letterSpacing: 2)),
@@ -862,6 +1163,8 @@ class _SugarGardenState extends State<SugarGarden>
           const SizedBox(width: 12),
           Expanded(child: Text('Şeker Dünyaları',
               style: _titleStyle(27, const Color(0xFF8B36B5)))),
+          _roundIcon(Icons.emoji_events_rounded, _openEventCenter),
+          const SizedBox(width: 6),
           _roundIcon(Icons.storefront_rounded, _openShop),
         ]),
       ),
@@ -987,7 +1290,7 @@ class _SugarGardenState extends State<SugarGarden>
               const SizedBox(width: 10),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                Text('BÖLÜM ${g.level}  •  V6', style: const TextStyle(
+                Text('BÖLÜM ${g.level}  •  V8', style: const TextStyle(
                     fontSize: 12, fontWeight: FontWeight.w900,
                     letterSpacing: 1.6, color: Color(0xFF77328B))),
                 Text(g.plan.name, maxLines: 1,
