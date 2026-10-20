@@ -569,11 +569,35 @@ class _SugarGardenState extends State<SugarGarden>
           final canClaim = _daily.canClaim(DateTime.now());
           return AlertDialog(
             key: const ValueKey('daily-rewards-dialog'),
-            backgroundColor: const Color(0xFFFFF5FE),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
-            title: Image.asset('assets/images/v14_daily_header.webp',
-              height: 66, fit: BoxFit.contain,
-              semanticLabel: 'GÜNLÜK HEDİYELER'),
+            backgroundColor: const Color(0xFFFFF8F4),
+            elevation: 12,
+            shadowColor: const Color(0xAA81326C),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(28),
+              side: const BorderSide(color: Color(0xFFFFD58E), width: 3)),
+            titlePadding: const EdgeInsets.fromLTRB(14, 16, 14, 8),
+            title: Container(
+              key: const ValueKey('v15-daily-header'),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [
+                  Color(0xFFFE65B1), Color(0xFFE82E9E), Color(0xFFA936BC)]),
+                borderRadius: BorderRadius.circular(26),
+                border: Border.all(color: const Color(0xFFFFEAAF), width: 3),
+                boxShadow: const [BoxShadow(color: Color(0x66B13793),
+                  blurRadius: 8, offset: Offset(0, 4))]),
+              child: const Row(mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.card_giftcard_rounded, size: 25, color: Colors.white),
+                  SizedBox(width: 7),
+                  Flexible(child: Text('GÜNLÜK HEDİYELER',
+                    textAlign: TextAlign.center, maxLines: 2,
+                    style: TextStyle(color: Colors.white,
+                      fontSize: 19, fontWeight: FontWeight.w900,
+                      shadows: [Shadow(color: Color(0x88672082),
+                        blurRadius: 3, offset: Offset(0, 2))]))),
+                ]),
+            ),
             content: SingleChildScrollView(child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -597,8 +621,12 @@ class _SugarGardenState extends State<SugarGarden>
                   icon: const Icon(Icons.redeem_rounded),
                   label: Text(canClaim ? 'BUGÜNKÜ HEDİYENİ AL' : 'BUGÜN ALINDI ✓'),
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFAA42C7),
-                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    backgroundColor: const Color(0xFFD62F94),
+                    foregroundColor: Colors.white,
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24)),
+                    padding: const EdgeInsets.symmetric(vertical: 15),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -611,12 +639,15 @@ class _SugarGardenState extends State<SugarGarden>
                     margin: const EdgeInsets.only(top: 9),
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Colors.white, Color(0xFFFFF2E5)]),
                       borderRadius: BorderRadius.circular(19),
                       boxShadow: const [BoxShadow(
-                        color: Color(0x1ECC7DAA), blurRadius: 8,
-                        offset: Offset(0, 3))],
-                      border: Border.all(color: const Color(0xFFF4B4DA)),
+                        color: Color(0x40C85A99), blurRadius: 10,
+                        offset: Offset(0, 4))],
+                      border: Border.all(color: const Color(0xFFFFCA9D), width: 1.5),
                     ),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -702,15 +733,17 @@ class _SugarGardenState extends State<SugarGarden>
     showModalBottomSheet<void>(
       context: navContext,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFFFFF5FE),
+      backgroundColor: const Color(0xFFFFF4EE),
+      elevation: 16,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(26))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(34)),
+        side: BorderSide(color: Color(0xFFFFD8A1), width: 3)),
       builder: (sheetContext) => StatefulBuilder(
         builder: (context, refresh) => SafeArea(child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 25),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Image.asset('assets/images/v14_shop_header.webp',
-              height: 84, fit: BoxFit.contain,
+            Image.asset('assets/images/v15_shop_banner.png',
+              height: 94, fit: BoxFit.contain,
               semanticLabel: 'ŞEKER DÜKKÂNI'),
             const SizedBox(height: 6),
             Text('🍬 ${_v6.coins} şeker paran var',
@@ -721,18 +754,20 @@ class _SugarGardenState extends State<SugarGarden>
             for (final booster in V6Booster.values)
               Padding(padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Card(
-                  color: const Color(0xFFFFFAFF),
-                  elevation: 3,
-                  shadowColor: const Color(0x55CA70B7),
+                  color: const Color(0xFFFFFEFA),
+                  elevation: 5,
+                  shadowColor: const Color(0x80B55A98),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    side: const BorderSide(color: Color(0xFFFFC8DD))),
+                    borderRadius: BorderRadius.circular(22),
+                    side: const BorderSide(color: Color(0xFFFFC981), width: 1.8)),
                   child: ListTile(
-                  leading: Image.asset(switch (booster) {
-                    V6Booster.hammer => 'assets/images/v14_hammer.webp',
-                    V6Booster.line => 'assets/images/v14_line.webp',
-                    V6Booster.shuffle => 'assets/images/v14_shuffle.webp',
-                  }, width: 54, height: 54, fit: BoxFit.contain),
+                  leading: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.asset(switch (booster) {
+                      V6Booster.hammer => 'assets/images/v14_hammer.webp',
+                      V6Booster.line => 'assets/images/v14_line.webp',
+                      V6Booster.shuffle => 'assets/images/v14_shuffle.webp',
+                    }, width: 54, height: 54, fit: BoxFit.contain)),
                   title: Text(switch (booster) {
                     V6Booster.hammer => 'Çekiç',
                     V6Booster.line => 'Satır patlatma',
@@ -1225,8 +1260,8 @@ class _SugarGardenState extends State<SugarGarden>
             Positioned.fill(
               child: Image.asset(
                 _page == ViewPage.map
-                    ? 'assets/images/v13_map_scene.webp'
-                    : 'assets/images/v13_home_scene.webp',
+                    ? 'assets/images/v15_candy_world.webp'
+                    : 'assets/images/v15_candy_world.webp',
                 fit: BoxFit.cover,
                 filterQuality: FilterQuality.high,
                 errorBuilder: (context, error, stackTrace) =>
@@ -1281,9 +1316,9 @@ class _SugarGardenState extends State<SugarGarden>
         const Spacer(flex: 2),
         // V14: true illustrated banner, not a static screenshot of the app.
         Image.asset(
-          'assets/images/v14_logo.webp',
-          width: small ? 285 : 325,
-          height: compact ? 171 : 193,
+          'assets/images/v15_logo_cutout.png',
+          width: small ? 305 : 350,
+          height: compact ? 195 : 220,
           fit: BoxFit.contain,
           filterQuality: FilterQuality.high,
         ),
@@ -1503,7 +1538,7 @@ class _SugarGardenState extends State<SugarGarden>
           _roundIcon(Icons.arrow_back_rounded,
               () => setState(() => _page = ViewPage.home)),
           const SizedBox(width: 12),
-          Expanded(child: Text('Şeker Yolu • V14',
+          Expanded(child: Text('Şeker Yolu • V15',
               style: _titleStyle(27, const Color(0xFFE94E96)))),
           _roundIcon(Icons.emoji_events_rounded, _openEventCenter),
           const SizedBox(width: 6),
@@ -1538,8 +1573,8 @@ class _SugarGardenState extends State<SugarGarden>
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
         gradient: const LinearGradient(
-          colors: [Color(0xFFFFE4F8), Color(0xFFFFF7D5)]),
-        border: Border.all(color: const Color(0xFFFFE4A0), width: 5),
+          colors: [Color(0xFFFF91C4), Color(0xFFFFF4C8), Color(0xFFCE67BA)]),
+        border: Border.all(color: const Color(0xFFFFE7A1), width: 6),
         boxShadow: const [BoxShadow(color: Color(0x66471662),
           blurRadius: 17, offset: Offset(0, 8))],
       ),
@@ -1551,7 +1586,7 @@ class _SugarGardenState extends State<SugarGarden>
             padding: const EdgeInsets.fromLTRB(13, 12, 13, 12),
             decoration: const BoxDecoration(
               gradient: LinearGradient(colors: [
-                Color(0xFFFF8DC0), Color(0xFFE047A6), Color(0xFF9639A7)])),
+                Color(0xFFFF84B8), Color(0xFFED3A95), Color(0xFF9A2CA7)])),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('🌸 ${world.name.toUpperCase()}',
@@ -1568,7 +1603,7 @@ class _SugarGardenState extends State<SugarGarden>
               final width = constraints.maxWidth;
               return Stack(children: [
                 const Positioned.fill(child: Image(
-                  image: AssetImage('assets/images/v13_map_scene.webp'),
+                  image: AssetImage('assets/images/v15_candy_world.webp'),
                   fit: BoxFit.cover,
                   filterQuality: FilterQuality.high,
                 )),
@@ -1634,8 +1669,9 @@ class _SugarGardenState extends State<SugarGarden>
                 : const LinearGradient(colors: [Color(0xFF8F839B),
                     Color(0xFF665878)]),
             border: Border.all(color: const Color(0xFFFFF1A8), width: 3.3),
-            boxShadow: const [BoxShadow(color: Color(0xB15E1762), blurRadius: 12, offset: Offset(0, 6)),
-                BoxShadow(color: Color(0x88FFFFFF), blurRadius: 8, offset: Offset(0, -2))],
+            boxShadow: const [
+              BoxShadow(color: Color(0xB15E1762), blurRadius: 14, offset: Offset(0, 6)),
+              BoxShadow(color: Color(0xAAFFFFFF), blurRadius: 9, offset: Offset(0, -2))],
           ),
           child: Center(child: unlocked
             ? Text('$level', style: const TextStyle(
@@ -1669,7 +1705,7 @@ class _SugarGardenState extends State<SugarGarden>
               const SizedBox(width: 10),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                Text('BÖLÜM ${g.level}  •  V14', style: const TextStyle(
+                Text('BÖLÜM ${g.level}  •  V15', style: const TextStyle(
                     fontSize: 12, fontWeight: FontWeight.w900,
                     letterSpacing: 1.6, color: Color(0xFF77328B))),
                 Text(g.plan.name, maxLines: 1,
@@ -1693,9 +1729,9 @@ class _SugarGardenState extends State<SugarGarden>
                 vertical: compact ? 7 : 12),
             decoration: BoxDecoration(
               gradient: const LinearGradient(colors: [
-                Color(0xFFFFFFFF), Color(0xFFFFF1D7), Color(0xFFFFDCEB)]),
-              borderRadius: BorderRadius.circular(25),
-              border: Border.all(color: const Color(0xFFFFEBA9), width: 3),
+                Color(0xFFFFFFFF), Color(0xFFFFF6DD), Color(0xFFFFD8EB)]),
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: const Color(0xFFFFE1A5), width: 3.5),
               boxShadow: const [BoxShadow(color: Color(0x309D359E),
                   blurRadius: 12, offset: Offset(0, 5))],
             ),
@@ -1822,9 +1858,9 @@ class _SugarGardenState extends State<SugarGarden>
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft, end: Alignment.bottomRight,
-          colors: [Color(0xFFFFF5C6), Color(0xFFFFC8F4), Color(0xFFFFCE66)]),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: const Color(0xFFFFF7CF), width: 6),
+          colors: [Color(0xFFFFE78C), Color(0xFFFFB4DA), Color(0xFFFFF0B1)]),
+        borderRadius: BorderRadius.circular(29),
+        border: Border.all(color: const Color(0xFFFFF3C4), width: 6),
         boxShadow: const [
           BoxShadow(color: Color(0x994D167A), blurRadius: 22, offset: Offset(0, 12)),
           BoxShadow(color: Color(0xAAFFFFFF), blurRadius: 6,
@@ -1836,7 +1872,7 @@ class _SugarGardenState extends State<SugarGarden>
           const Positioned.fill(child: DecoratedBox(
             decoration: BoxDecoration(gradient: RadialGradient(
               center: Alignment(-.55, -.8), radius: 1.5,
-              colors: [Color(0xFF5676B7), Color(0xFF284C87), Color(0xFF132D57)],
+              colors: [Color(0xFF6686C6), Color(0xFF2D528F), Color(0xFF152D5C)],
             )),
           )),
           ...[for (var r = 0; r < gridSize; r++)
