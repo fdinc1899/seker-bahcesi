@@ -1,0 +1,67 @@
+name: Seker Bahcesi V13 Cakismasiz APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Projeyi indir
+        uses: actions/checkout@v4
+      - name: Java 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Android proje dosyalarini olustur
+        run: flutter create --platforms=android --project-name seker_bahcesi .
+      - name: V13 icin farkli Android paket kimligi belirle
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          candidates = [Path('android/app/build.gradle.kts'), Path('android/app/build.gradle')]
+          p = next((p for p in candidates if p.is_file()), None)
+          if p is None:
+              raise SystemExit('HATA: Android Gradle dosyasi bulunamadi')
+          s = p.read_text(encoding='utf-8')
+          pattern = r'(?m)^(\s*applicationId\s*(?:=\s*)?)["\'][^"\']+["\']'
+          s, n = re.subn(pattern, r'\g<1>"com.sekerbahcesi.v13temiz"', s, count=1)
+          if n != 1:
+              raise SystemExit('HATA: applicationId degistirilemedi')
+          p.write_text(s, encoding='utf-8')
+          print('Yeni paket kimligi: com.sekerbahcesi.v13temiz')
+
+          manifest = Path('android/app/src/main/AndroidManifest.xml')
+          if manifest.is_file():
+              m = manifest.read_text(encoding='utf-8')
+              m = re.sub(r'android:label="[^"]*"', 'android:label="Şeker Bahçesi V13"', m, count=1)
+              manifest.write_text(m, encoding='utf-8')
+          PY
+      - name: Paketleri indir
+        run: flutter pub get
+      - name: Oyun simgesini yukle
+        run: dart run flutter_launcher_icons
+      - name: Birim testleri
+        run: flutter test
+      - name: APK olustur
+        run: flutter build apk --debug
+      - name: APK indirilebilir dosya olarak yayinla
+        uses: actions/upload-artifact@v4
+        with:
+          name: Seker_Bahcesi_V13_Cakismasiz
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 30
+          if-no-files-found: error
