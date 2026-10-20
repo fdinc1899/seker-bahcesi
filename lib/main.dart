@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'match_voice.dart';
 import 'candy_art.dart';
 import 'game_engine.dart';
 import 'game_audio.dart';
@@ -38,6 +39,7 @@ class SugarGarden extends StatefulWidget {
 class _SugarGardenState extends State<SugarGarden>
     with TickerProviderStateMixin, WidgetsBindingObserver {
   final GameAudio _audio = GameAudio();
+  final MatchVoice _voice = MatchVoice();
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   SharedPreferences? _storage;
   bool _loading = true;
@@ -93,6 +95,7 @@ class _SugarGardenState extends State<SugarGarden>
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused) {
       _audio.pauseMusic();
+      _voice.stop();
       _save();
     } else if (state == AppLifecycleState.resumed) {
       _audio.resumeMusic();
@@ -112,6 +115,7 @@ class _SugarGardenState extends State<SugarGarden>
     _burstAnimation.dispose();
     _hintAnimation.dispose();
     _winAnimation.dispose();
+    _voice.dispose();
     _audio.dispose();
     super.dispose();
   }
@@ -191,6 +195,7 @@ class _SugarGardenState extends State<SugarGarden>
       _game = null;
     }
     await _audio.initialize(enabled: _sound);
+    await _voice.initialize(enabled: _sound);
     if (mounted) setState(() => _loading = false);
   }
 
@@ -220,6 +225,7 @@ class _SugarGardenState extends State<SugarGarden>
   void _toggleSound() {
     setState(() => _sound = !_sound);
     _audio.setEnabled(_sound);
+    _voice.setEnabled(_sound);
     _save();
   }
 
@@ -351,6 +357,8 @@ class _SugarGardenState extends State<SugarGarden>
                 : matched.length >= 5 ? 'MUHTEŞEM!' : 'HARİKA!';
         _comboBanner = _message;
       });
+      // V15.4: Match celebration voice; never awaits or interrupts the board.
+      _voice.sayForMatch(matched.length, chain: chain);
       _audio.play(chain > 1 ? CandySound.combo
           : wave.spawns.isNotEmpty || matched.length >= 7
               ? CandySound.special : CandySound.pop);
@@ -1647,7 +1655,7 @@ class _SugarGardenState extends State<SugarGarden>
               boxShadow: const [BoxShadow(color: Color(0x4D52246A),
                 blurRadius: 7, offset: Offset(0, 3))],
             ),
-            child: Text('Şeker Yolu • V15.3', maxLines: 1,
+            child: Text('Şeker Yolu • V15.4', maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: _titleStyle(20, const Color(0xFF671C73))),
           )),
@@ -1828,7 +1836,7 @@ class _SugarGardenState extends State<SugarGarden>
                 ),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('BÖLÜM ${g.level}  •  V15.3', maxLines: 1,
+                    Text('BÖLÜM ${g.level}  •  V15.4', maxLines: 1,
                       style: const TextStyle(fontSize: 11,
                         fontWeight: FontWeight.w900, letterSpacing: .5,
                         color: Color(0xFF64236D))),

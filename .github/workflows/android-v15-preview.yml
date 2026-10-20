@@ -73,6 +73,32 @@ jobs:
               xml=re.sub(r'android:label="[^"]*"', 'android:label="Şeker Bahçesi V15"', xml,count=1)
               manifest.write_text(xml)
           PY
+      - name: Android Turkce konusma servisini bildir
+        shell: bash
+        run: |
+          python3 - <<'PYTTS'
+          from pathlib import Path
+          manifest = Path('android/app/src/main/AndroidManifest.xml')
+          if not manifest.is_file():
+              raise SystemExit('AndroidManifest.xml bulunamadi')
+          data = manifest.read_text()
+          service = 'android.intent.action.TTS_SERVICE'
+          if service not in data:
+              if '<queries>' in data:
+                  data = data.replace('</queries>',
+                      '    <intent>\n'
+                      '      <action android:name="' + service + '" />\n'
+                      '    </intent>\n  </queries>', 1)
+              elif '<application' in data:
+                  data = data.replace('<application',
+                      '<queries>\n'
+                      '    <intent>\n'
+                      '      <action android:name="' + service + '" />\n'
+                      '    </intent>\n  </queries>\n  <application', 1)
+              else:
+                  raise SystemExit('AndroidManifest beklenen formatta degil')
+              manifest.write_text(data)
+          PYTTS
       - name: Paketleri kur
         run: flutter pub get
       - name: Uygulama ikonunu olustur
