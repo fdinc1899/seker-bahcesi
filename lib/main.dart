@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'match_voice.dart';
+import 'v15_5_visuals.dart';
 import 'candy_art.dart';
 import 'game_engine.dart';
 import 'game_audio.dart';
@@ -1359,8 +1360,8 @@ class _SugarGardenState extends State<SugarGarden>
             Positioned.fill(
               child: Image.asset(
                 _page == ViewPage.map
-                    ? 'assets/images/v15_3_world.webp'
-                    : 'assets/images/v15_3_world.webp',
+                    ? 'assets/images/v15_5_world.webp'
+                    : 'assets/images/v15_5_world.webp',
                 fit: BoxFit.cover,
                 filterQuality: FilterQuality.high,
                 errorBuilder: (context, error, stackTrace) =>
@@ -1655,7 +1656,7 @@ class _SugarGardenState extends State<SugarGarden>
               boxShadow: const [BoxShadow(color: Color(0x4D52246A),
                 blurRadius: 7, offset: Offset(0, 3))],
             ),
-            child: Text('Şeker Yolu • V15.4', maxLines: 1,
+            child: Text('Şeker Yolu • V15.5', maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: _titleStyle(20, const Color(0xFF671C73))),
           )),
@@ -1725,7 +1726,7 @@ class _SugarGardenState extends State<SugarGarden>
               final width = constraints.maxWidth;
               return Stack(children: [
                 const Positioned.fill(child: Image(
-                  image: AssetImage('assets/images/v15_3_world.webp'),
+                  image: AssetImage('assets/images/v15_5_world.webp'),
                   fit: BoxFit.cover,
                   filterQuality: FilterQuality.high,
                 )),
@@ -1738,13 +1739,21 @@ class _SugarGardenState extends State<SugarGarden>
                 const Positioned.fill(child: IgnorePointer(
                   child: CustomPaint(painter: V12RoadPainter()),
                 )),
+                const Positioned.fill(child: IgnorePointer(
+                  child: V155MapShimmer(),
+                )),
                 for (var i = 0; i < v6LevelsPerWorld; i++)
                   Positioned(
                     left: V12PathGeometry.levelCenter(i, width).dx - 31,
                     top: V12PathGeometry.levelCenter(i, width).dy - 31,
                     width: 62,
                     height: 72,
-                    child: _levelNode(world.start + i),
+                    child: (world.start + i == _unlocked)
+                        ? V155CurrentLevelPulse(
+                            key: ValueKey('v15-5-current-${world.start + i}'),
+                            child: _levelNode(world.start + i),
+                          )
+                        : _levelNode(world.start + i),
                   ),
               ]);
             }),
@@ -1836,7 +1845,7 @@ class _SugarGardenState extends State<SugarGarden>
                 ),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('BÖLÜM ${g.level}  •  V15.4', maxLines: 1,
+                    Text('BÖLÜM ${g.level}  •  V15.5', maxLines: 1,
                       style: const TextStyle(fontSize: 11,
                         fontWeight: FontWeight.w900, letterSpacing: .5,
                         color: Color(0xFF64236D))),
@@ -2121,6 +2130,16 @@ class _SugarGardenState extends State<SugarGarden>
                 progress: _burstAnimation.value,
                 centers: _burstPositions,
                 colors: _burstColors.isEmpty ? [Colors.white] : _burstColors,
+              ),
+            ),
+          ))),
+          // V15.5: extra glitter synchronized with the existing burst animation.
+          Positioned.fill(child: IgnorePointer(child: AnimatedBuilder(
+            animation: _burstAnimation,
+            builder: (context, _) => CustomPaint(
+              painter: V155BurstGlitterPainter(
+                progress: _burstAnimation.value,
+                centers: _burstPositions,
               ),
             ),
           ))),
