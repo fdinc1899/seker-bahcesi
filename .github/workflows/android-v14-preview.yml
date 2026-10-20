@@ -1,0 +1,60 @@
+name: Seker Bahcesi V14 Gorunumu
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    steps:
+      - name: Kaynak kodu indir
+        uses: actions/checkout@v4
+      - name: Java kur
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Android kaynaklarini olustur
+        run: flutter create --platforms=android --project-name seker_bahcesi .
+      - name: Ayrı V14 onizleme paketi
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=next((p for p in (Path('android/app/build.gradle.kts'), Path('android/app/build.gradle')) if p.exists()),None)
+          if p is None: raise SystemExit('Android gradle bulunamadi')
+          code=p.read_text()
+          code,n=re.subn(r'(?m)^(\s*applicationId\s*(?:=\s*)?)["\'][^"\']+["\']',r'\g<1>"com.sekerbahcesi.v14onizleme"',code,count=1)
+          if n!=1: raise SystemExit('Paket kimligi guncellenemedi')
+          p.write_text(code)
+          m=Path('android/app/src/main/AndroidManifest.xml')
+          if m.exists():
+            s=m.read_text()
+            s=re.sub(r'android:label="[^"]*"','android:label="Şeker Bahçesi V14"',s,count=1)
+            m.write_text(s)
+          PY
+      - name: Kutuphaneleri kur
+        run: flutter pub get
+      - name: Simgeyi olustur
+        run: dart run flutter_launcher_icons
+      - name: Testleri calistir
+        run: flutter test
+      - name: APK derle
+        run: flutter build apk --debug
+      - name: APK dosyasini yayinla
+        uses: actions/upload-artifact@v4
+        with:
+          name: Seker_Bahcesi_V14_Preview
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 30
+          if-no-files-found: error
