@@ -1525,12 +1525,21 @@ class _SugarGardenState extends State<SugarGarden>
             child: Icon(icon, size: 29, color: const Color(0xFF8D3584)),
           ),
           const SizedBox(height: 5),
-          Text(title, style: const TextStyle(color: Color(0xFF5B2363),
-              fontSize: 10, fontWeight: FontWeight.w900,
-              shadows: [Shadow(color: Colors.white, blurRadius: 4)])),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+            decoration: BoxDecoration(
+              color: const Color(0xF9FFF8F1),
+              borderRadius: BorderRadius.circular(9),
+              border: Border.all(color: const Color(0xFFFFD692), width: 1.2),
+            ),
+            child: Text(title, maxLines: 1, textAlign: TextAlign.center,
+              style: const TextStyle(color: Color(0xFF5D1B69),
+                fontSize: 10, fontWeight: FontWeight.w900, height: 1.0)),
+          ),
         ]),
       );
 
+  // V15.1 readability panels: scenery stays, text contrast improves.
   Widget _mapPage() {
     return Column(children: [
       Padding(padding: const EdgeInsets.fromLTRB(16, 9, 16, 12),
@@ -1538,8 +1547,19 @@ class _SugarGardenState extends State<SugarGarden>
           _roundIcon(Icons.arrow_back_rounded,
               () => setState(() => _page = ViewPage.home)),
           const SizedBox(width: 12),
-          Expanded(child: Text('Şeker Yolu • V15',
-              style: _titleStyle(27, const Color(0xFFE94E96)))),
+          Expanded(child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 9),
+            decoration: BoxDecoration(
+              color: const Color(0xF5FFF6EB),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFFFD88C), width: 1.6),
+              boxShadow: const [BoxShadow(color: Color(0x4D52246A),
+                blurRadius: 7, offset: Offset(0, 3))],
+            ),
+            child: Text('Şeker Yolu • V15', maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: _titleStyle(20, const Color(0xFF671C73))),
+          )),
           _roundIcon(Icons.emoji_events_rounded, _openEventCenter),
           const SizedBox(width: 6),
           _roundIcon(Icons.storefront_rounded, _openShop),
@@ -1590,12 +1610,15 @@ class _SugarGardenState extends State<SugarGarden>
             child: Column(crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('🌸 ${world.name.toUpperCase()}',
-                  style: const TextStyle(color: Colors.white, fontSize: 17,
+                  style: const TextStyle(color: Colors.white, fontSize: 18,
                     fontWeight: FontWeight.w900, shadows: [
-                      Shadow(color: Color(0x993B1453), blurRadius: 3, offset: Offset(0, 2))])),
+                      Shadow(color: Color(0xFF4F135A), blurRadius: 4, offset: Offset(0, 2)),
+                      Shadow(color: Color(0xFF4F135A), blurRadius: 3, offset: Offset(0, -1))])),
                 Text('${world.subtitle}  •  $completed / 20 tamamlandı',
-                  style: const TextStyle(color: Color(0xFFFFF4D8),
-                    fontWeight: FontWeight.w800, fontSize: 12)),
+                  style: const TextStyle(color: Colors.white,
+                    fontWeight: FontWeight.w900, fontSize: 13,
+                    shadows: [Shadow(color: Color(0xFF52185F),
+                      blurRadius: 4, offset: Offset(0, 2))])),
               ]),
           ),
           SizedBox(height: V12PathGeometry.height,
@@ -1703,17 +1726,29 @@ class _SugarGardenState extends State<SugarGarden>
             child: Row(children: [
               _roundIcon(Icons.arrow_back_rounded, _leaveGame),
               const SizedBox(width: 10),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+              Expanded(child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+                decoration: BoxDecoration(
+                  color: const Color(0xF8FFF7ED),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFFFD99D), width: 1.5),
+                  boxShadow: const [BoxShadow(color: Color(0x3D58266B),
+                    blurRadius: 8, offset: Offset(0, 3))],
+                ),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                Text('BÖLÜM ${g.level}  •  V15', style: const TextStyle(
-                    fontSize: 12, fontWeight: FontWeight.w900,
-                    letterSpacing: 1.6, color: Color(0xFF77328B))),
-                Text(g.plan.name, maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 17,
+                    Text('BÖLÜM ${g.level}  •  V15', maxLines: 1,
+                      style: const TextStyle(fontSize: 11,
+                        fontWeight: FontWeight.w900, letterSpacing: .5,
+                        color: Color(0xFF64236D))),
+                    Text(g.plan.name, maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 17,
                         fontWeight: FontWeight.w900,
-                        color: Color(0xFF8439A3))),
-              ])),
+                        color: Color(0xFF631A77))),
+                  ],
+                ),
+              )),
               _roundIcon(Icons.lightbulb_rounded, _showHint),
               const SizedBox(width: 6),
               _roundIcon(Icons.help_outline_rounded, _howToPlay),
@@ -1803,15 +1838,25 @@ class _SugarGardenState extends State<SugarGarden>
             },
           ),
           Column(children: [
-            Text(_power == PowerMode.none ? _message :
-                    'Patlatmak istediğin şekere dokun!',
-                textAlign: TextAlign.center,
-                maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontWeight: FontWeight.w900,
-                    fontSize: compact ? 12 : 15,
-                    color: const Color(0xFF85328C),
-                    shadows: const [Shadow(color: Colors.white,
-                        blurRadius: 5)])),
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 12),
+              padding: EdgeInsets.symmetric(horizontal: 13,
+                  vertical: compact ? 5 : 7),
+              decoration: BoxDecoration(
+                color: const Color(0xF5FFF8ED),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFFFD58E), width: 1.5),
+                boxShadow: const [BoxShadow(color: Color(0x4D662C77),
+                  blurRadius: 9, offset: Offset(0, 3))],
+              ),
+              child: Text(_power == PowerMode.none ? _message :
+                      'Patlatmak istediğin şekere dokun!',
+                  textAlign: TextAlign.center,
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontWeight: FontWeight.w900,
+                      fontSize: compact ? 13 : 15,
+                      color: const Color(0xFF5A166C))),
+            ),
             const SizedBox(height: 8),
             Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -1827,13 +1872,23 @@ class _SugarGardenState extends State<SugarGarden>
               ],
             ),
           ]),
-          Padding(padding: const EdgeInsets.only(bottom: 10),
-            child: Text(g.remainingObstacles > 0
-                ? 'BUZ: ${g.countObstacle(ObstacleKind.ice)}   ÇİKOLATA: ${g.countObstacle(ObstacleKind.chocolate)}   KİLİT: ${g.countObstacle(ObstacleKind.lock)}'
-                : '4 eşleşme: çizgili • 5 eşleşme: renk bombası',
-                style: TextStyle(fontSize: compact ? 10 : 11,
-                    color: const Color(0xFF84478E),
-                    fontWeight: FontWeight.w700)),
+          Padding(padding: const EdgeInsets.fromLTRB(10, 0, 10, 9),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xF6FFF8EB),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFFFD597), width: 1.3),
+              ),
+              child: Text(g.remainingObstacles > 0
+                  ? 'BUZ: ${g.countObstacle(ObstacleKind.ice)}   ÇİKOLATA: ${g.countObstacle(ObstacleKind.chocolate)}   KİLİT: ${g.countObstacle(ObstacleKind.lock)}'
+                  : '4 eşleşme: çizgili • 5 eşleşme: renk bombası',
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: compact ? 10 : 11,
+                      color: const Color(0xFF5E206E),
+                      fontWeight: FontWeight.w900)),
+            ),
           ),
         ]),
         if (_result != null) Positioned.fill(child: _resultOverlay(g)),
@@ -2175,8 +2230,17 @@ class _SugarGardenState extends State<SugarGarden>
             ),
           ]),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(fontSize: 10,
-              fontWeight: FontWeight.w900, color: Color(0xFF763781))),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: const Color(0xF8FFF5E9),
+              borderRadius: BorderRadius.circular(11),
+              border: Border.all(color: const Color(0xFFFFD598), width: 1.1),
+            ),
+            child: Text(label, maxLines: 1, style: const TextStyle(
+                fontSize: 11, fontWeight: FontWeight.w900,
+                color: Color(0xFF5A1D69))),
+          ),
         ]),
       ),
     );
@@ -2237,8 +2301,9 @@ class _SugarGardenState extends State<SugarGarden>
       border: Border.all(color: Colors.white, width: 2),
       boxShadow: const [BoxShadow(color: Color(0x28C96CC3), blurRadius: 7, offset: Offset(0, 3))],
     ),
-    child: Text(text, style: TextStyle(color: shade,
-        fontSize: 12, fontWeight: FontWeight.w900)),
+    child: Text(text, maxLines: 1,
+      style: TextStyle(color: shade, fontSize: 13,
+        fontWeight: FontWeight.w900, height: 1.0)),
   );
 
   Widget _bigButton(String label, VoidCallback action,
