@@ -881,7 +881,7 @@ class _SugarGardenState extends State<SugarGarden>
         borderRadius: BorderRadius.vertical(top: Radius.circular(26))),
       builder: (sheetContext) => StatefulBuilder(
         builder: (context, refresh) => SafeArea(child: SizedBox(
-          height: MediaQuery.sizeOf(context).height * .78,
+          height: MediaQuery.sizeOf(context).height * .90,
           child: Column(children: [
             const SizedBox(height: 16),
             Container(
@@ -900,7 +900,7 @@ class _SugarGardenState extends State<SugarGarden>
                 children: [
                   Icon(Icons.emoji_events_rounded, color: Color(0xFFFFE19B), size: 29),
                   SizedBox(width: 8),
-                  Flexible(child: Text('ETKİNLİK MERKEZİ  •  V9',
+                  Flexible(child: Text('ETKİNLİK MERKEZİ',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900,
                       color: Colors.white,
@@ -1010,7 +1010,7 @@ class _SugarGardenState extends State<SugarGarden>
         const Row(children: [
           Icon(Icons.casino_rounded, color: Color(0xFFB742BB), size: 29),
           SizedBox(width: 8),
-          Expanded(child: Text('GÜNLÜK ŞANS ÇARKI  •  V9',
+          Expanded(child: Text('GÜNLÜK ŞANS ÇARKI',
             style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900,
               color: Color(0xFF712179)))),
         ]),
@@ -1057,7 +1057,7 @@ class _SugarGardenState extends State<SugarGarden>
         const Row(children: [
           Icon(Icons.auto_awesome_rounded, color: Color(0xFFE83D9A), size: 24),
           SizedBox(width: 7),
-          Expanded(child: Text('ŞEKER KOLEKSİYONU  •  V9',
+          Expanded(child: Text('ŞEKER KOLEKSİYONU',
             style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900,
               color: Color(0xFF6F257A)))),
         ]),
@@ -1351,8 +1351,8 @@ class _SugarGardenState extends State<SugarGarden>
             Positioned.fill(
               child: Image.asset(
                 _page == ViewPage.map
-                    ? 'assets/images/v15_candy_world.webp'
-                    : 'assets/images/v15_candy_world.webp',
+                    ? 'assets/images/v15_3_world.webp'
+                    : 'assets/images/v15_3_world.webp',
                 fit: BoxFit.cover,
                 filterQuality: FilterQuality.high,
                 errorBuilder: (context, error, stackTrace) =>
@@ -1647,7 +1647,7 @@ class _SugarGardenState extends State<SugarGarden>
               boxShadow: const [BoxShadow(color: Color(0x4D52246A),
                 blurRadius: 7, offset: Offset(0, 3))],
             ),
-            child: Text('Şeker Yolu • V15', maxLines: 1,
+            child: Text('Şeker Yolu • V15.3', maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: _titleStyle(20, const Color(0xFF671C73))),
           )),
@@ -1717,7 +1717,7 @@ class _SugarGardenState extends State<SugarGarden>
               final width = constraints.maxWidth;
               return Stack(children: [
                 const Positioned.fill(child: Image(
-                  image: AssetImage('assets/images/v15_candy_world.webp'),
+                  image: AssetImage('assets/images/v15_3_world.webp'),
                   fit: BoxFit.cover,
                   filterQuality: FilterQuality.high,
                 )),
@@ -1828,7 +1828,7 @@ class _SugarGardenState extends State<SugarGarden>
                 ),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('BÖLÜM ${g.level}  •  V15', maxLines: 1,
+                    Text('BÖLÜM ${g.level}  •  V15.3', maxLines: 1,
                       style: const TextStyle(fontSize: 11,
                         fontWeight: FontWeight.w900, letterSpacing: .5,
                         color: Color(0xFF64236D))),
