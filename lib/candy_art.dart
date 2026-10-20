@@ -26,10 +26,69 @@ class CandyPiece extends StatelessWidget {
   final SpecialKind special;
 
   @override
-  Widget build(BuildContext context) => CustomPaint(
+  Widget build(BuildContext context) {
+    final path = special == SpecialKind.colorBomb
+        ? 'assets/images/candy_bomb.png'
+        : 'assets/images/candy_${type % candyPalette.length}.png';
+    final sprite = Image.asset(
+      path,
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.high,
+      gaplessPlayback: true,
+      errorBuilder: (context, error, stackTrace) => CustomPaint(
         size: Size.square(size),
         painter: CandyPainter(type, special),
-      );
+      ),
+    );
+    return SizedBox.square(
+      dimension: size,
+      child: Stack(fit: StackFit.expand, children: [
+        sprite,
+        if (special == SpecialKind.horizontal ||
+            special == SpecialKind.vertical)
+          CustomPaint(painter: _V11StripeOverlay(special)),
+      ]),
+    );
+  }
+
+}
+
+/// Transparent gold/white stripes over the V11 high-resolution candy sprite.
+class _V11StripeOverlay extends CustomPainter {
+  const _V11StripeOverlay(this.kind);
+  final SpecialKind kind;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    canvas.save();
+    canvas.scale(size.width / 100, size.height / 100);
+    final horizontal = kind == SpecialKind.horizontal;
+    final band = horizontal
+        ? const Rect.fromLTWH(11, 39, 78, 22)
+        : const Rect.fromLTWH(39, 11, 22, 78);
+    final outer = RRect.fromRectAndRadius(band, const Radius.circular(10));
+    canvas.drawRRect(outer, Paint()..color = const Color(0xDFFFEE95)
+      ..style = PaintingStyle.stroke..strokeWidth = 3.6);
+    canvas.drawRRect(outer, Paint()..shader = const LinearGradient(
+      colors: [Color(0xFFFFFAFF), Color(0xFFFF8DBF), Color(0xFFFFFFFF)],
+    ).createShader(band));
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(horizontal
+          ? const Rect.fromLTWH(18, 46, 64, 7)
+          : const Rect.fromLTWH(46, 18, 7, 64), const Radius.circular(6)),
+      Paint()..color = const Color(0xCFFFFFFF),
+    );
+    canvas.drawCircle(const Offset(50, 50), 7,
+      Paint()..color = const Color(0xFFFFD843));
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _V11StripeOverlay oldDelegate) =>
+      kind != oldDelegate.kind;
 }
 
 /// High-contrast glass candy with soft internal lighting and faceted highlights.
@@ -284,7 +343,7 @@ class SceneryPainter extends CustomPainter {
           ..shader = const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF80E6FF), Color(0xFFFFD6EE), Color(0xFFFF97CA)],
+            colors: [Color(0xFF8DEBFF), Color(0xFFFFD9F1), Color(0xFFFFA0C7)],
             stops: [0, .57, 1],
           ).createShader(bounds));
 
@@ -327,9 +386,20 @@ class SceneryPainter extends CustomPainter {
         ..close();
       canvas.drawPath(path, Paint()..color = color);
     }
-    hill(size.height * .78, const Color(0xFFC4F6AF), 67);
-    hill(size.height * .86, const Color(0xFF86DFA1), 51);
-    hill(size.height * .94, const Color(0xFF55C89E), 39);
+    hill(size.height * .76, const Color(0xFFD1F7A2), 71);
+    hill(size.height * .84, const Color(0xFF9AE7A8), 53);
+    hill(size.height * .92, const Color(0xFF67D3B0), 41);
+
+    final river = Path()
+      ..moveTo(size.width * .12, size.height)
+      ..quadraticBezierTo(size.width * .20, size.height * .88, size.width * .30, size.height * .83)
+      ..quadraticBezierTo(size.width * .43, size.height * .77, size.width * .56, size.height * .82)
+      ..quadraticBezierTo(size.width * .72, size.height * .89, size.width * .80, size.height)
+      ..close();
+    canvas.drawPath(river, Paint()..shader = LinearGradient(
+      begin: Alignment.topCenter, end: Alignment.bottomCenter,
+      colors: [const Color(0xAAFFFFFF), const Color(0x66AEEAFF), const Color(0x44FFFFFF)],
+    ).createShader(Offset.zero & size));
 
     // Fixed floating sugar specks: colorful but inexpensive during gameplay.
     for (var i = 0; i < 18; i++) {

@@ -16,6 +16,8 @@ import 'v9_wheel.dart';
 import 'level_result.dart';
 import 'reward_rules.dart';
 import 'daily_rewards.dart';
+import 'v12_backup.dart';
+import 'v12_map_path.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -1205,12 +1207,24 @@ class _SugarGardenState extends State<SugarGarden>
       home: Scaffold(
         body: Stack(
           children: [
-            const Positioned.fill(child: CustomPaint(painter: SceneryPainter())),
+            Positioned.fill(
+              child: Image.asset(
+                _page == ViewPage.map
+                    ? 'assets/images/v13_map_scene.webp'
+                    : 'assets/images/v13_home_scene.webp',
+                fit: BoxFit.cover,
+                filterQuality: FilterQuality.high,
+                errorBuilder: (context, error, stackTrace) =>
+                    const CustomPaint(painter: SceneryPainter()),
+              ),
+            ),
             Positioned.fill(child: Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                  colors: [Color(0x30FFFFFF), Color(0x00FFFFFF), Color(0x60C9328B)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: [0, .38, 1],
+                  colors: [Color(0x08FFFFFF), Color(0x00FFFFFF), Color(0x0CFFCAEA)],
                 ),
               ),
             )),
@@ -1231,73 +1245,263 @@ class _SugarGardenState extends State<SugarGarden>
 
   Widget _homePage() {
     return LayoutBuilder(builder: (context, limits) {
-      final compact = limits.maxHeight < 690;
+      final compact = limits.maxHeight < 710;
+      final small = limits.maxWidth < 370;
       return Column(children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(22, 12, 18, 0),
+          padding: const EdgeInsets.fromLTRB(12, 7, 12, 0),
           child: Row(children: [
             _roundIcon(Icons.help_outline_rounded, _howToPlay),
-            const SizedBox(width: 9),
-            Tooltip(message: 'Günlük hediye ve görevler',
-              child: _roundIcon(Icons.card_giftcard_rounded, _openDailyRewards)),
-            const SizedBox(width: 8),
-            Tooltip(message: 'Şeker dükkânı',
-              child: _roundIcon(Icons.storefront_rounded, _openShop)),
-            const SizedBox(width: 6),
-            Tooltip(message: 'Haftalık etkinlik ve başarımlar',
-              child: _roundIcon(Icons.emoji_events_rounded, _openEventCenter)),
-            const Spacer(),
-            Text('★ ${_stars.values.fold<int>(0, (a, b) => a + b)}',
-                style: const TextStyle(fontWeight: FontWeight.w900,
-                  color: Color(0xFFEF8C19))),
             const SizedBox(width: 7),
+            _roundIcon(Icons.card_giftcard_rounded, _openDailyRewards),
+            const SizedBox(width: 7),
+            _roundIcon(Icons.emoji_events_rounded, _openEventCenter),
+            const Spacer(),
+            _pill('🍬 ${_v6.coins}', const Color(0xFFB16A1F)),
+            const SizedBox(width: 6),
             _roundIcon(_sound ? Icons.volume_up_rounded : Icons.volume_off_rounded,
                 _toggleSound),
           ]),
         ),
-        const Spacer(),
-        SizedBox(
-          height: compact ? 148 : 197,
-          child: Stack(alignment: Alignment.center, children: [
-            Positioned(left: 20, top: 27,
-              child: Transform.rotate(angle: -.22,
-                  child: const CandyPiece(type: 1, size: 126))),
-            Positioned(right: 12, top: 1,
-              child: Transform.rotate(angle: .2,
-                  child: const CandyPiece(type: 2, size: 126))),
-            Positioned(top: compact ? 45 : 67,
-                child: const CandyPiece(type: 3, size: 116)),
-            Positioned(right: 36, bottom: -10,
-                child: const CandyPiece(type: 5, size: 74)),
-            Positioned(left: 37, bottom: -9,
-                child: const CandyPiece(type: 0, size: 68)),
+        const Spacer(flex: 2),
+        Container(
+          width: small ? 296 : 325,
+          padding: EdgeInsets.symmetric(vertical: compact ? 12 : 20,
+              horizontal: 12),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft, end: Alignment.bottomRight,
+              colors: [Color(0xFFCE9051), Color(0xFF96542D), Color(0xFF61351F)]),
+            borderRadius: BorderRadius.circular(32),
+            border: Border.all(color: const Color(0xFFFFECAA), width: 5),
+            boxShadow: const [
+              BoxShadow(color: Color(0x774D1951), blurRadius: 24,
+                  offset: Offset(0, 13)),
+              BoxShadow(color: Color(0x88FFFFFF), blurRadius: 8,
+                  offset: Offset(0, -2)),
+            ],
+          ),
+          child: Column(children: [
+            Text('🌼  🌸  🦋  🌼',
+              style: TextStyle(fontSize: compact ? 18 : 24)),
+            Text('Şeker', textAlign: TextAlign.center,
+              style: _titleStyle(compact ? 49 : 56, const Color(0xFFFF64AA))),
+            Text('Bahçesi', textAlign: TextAlign.center,
+              style: _titleStyle(compact ? 45 : 54, const Color(0xFFFFC642))),
+            const SizedBox(height: 3),
+            const Text('ULTRA NET GÖRSELLER • V13',
+              style: TextStyle(color: Color(0xFFFFF2D7), fontSize: 10,
+                  fontWeight: FontWeight.w900, letterSpacing: 1.6)),
           ]),
         ),
-        SizedBox(height: compact ? 8 : 18),
-        Text('ŞEKER', textAlign: TextAlign.center,
-            style: _titleStyle(compact ? 54 : 66, const Color(0xFFF5388C))),
-        Text('BAHÇESİ', textAlign: TextAlign.center,
-            style: _titleStyle(compact ? 51 : 62, const Color(0xFF8233CB))),
-        const SizedBox(height: 13),
-        const Text('TATLI EŞLEŞMELERİN DÜNYASI • V9',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Color(0xFF784184), fontSize: 12,
-                fontWeight: FontWeight.w900, letterSpacing: 2)),
-        const Spacer(),
-        _bigButton('▶  OYNA', () => _openGame(_continueLevel()),
-            colorA: const Color(0xFFFFB83C),
-            colorB: const Color(0xFFFF653D)),
-        const SizedBox(height: 14),
-        _bigButton('BÖLÜMLER', () { _fx(); setState(() => _page = ViewPage.map); },
-            colorA: const Color(0xFFB972F8),
-            colorB: const Color(0xFF8137C8), small: true),
-        const Spacer(),
-        _pill('🍬  120 BÖLÜM  •  6 DÜNYA  •  ${_v6.coins} PARA',
-            const Color(0xFF8335A3)),
-        SizedBox(height: compact ? 15 : 35),
+        SizedBox(height: compact ? 15 : 25),
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          for (final i in [1, 2, 3, 0, 5])
+            Padding(padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: CandyPiece(type: i, size: compact ? 49 : 57)),
+        ]),
+        const Spacer(flex: 2),
+        _bigButton('▶   OYNA', () => _openGame(_continueLevel()),
+          colorA: const Color(0xFF90F845), colorB: const Color(0xFF16AB34)),
+        SizedBox(height: compact ? 9 : 15),
+        _bigButton('🗺   BÖLÜMLER', () {
+          _fx(); setState(() => _page = ViewPage.map);
+        }, colorA: const Color(0xFFFF94CD),
+           colorB: const Color(0xFFCE3CBA), small: true),
+        const Spacer(flex: 2),
+        Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+          _homeMenuButton(Icons.storefront_rounded, 'DÜKKÂN', _openShop),
+          _homeMenuButton(Icons.task_alt_rounded, 'GÖREVLER', _openDailyRewards),
+          _homeMenuButton(Icons.card_giftcard_rounded, 'ETKİNLİK', _openEventCenter),
+          _homeMenuButton(Icons.map_rounded, 'HARİTA',
+              () => setState(() => _page = ViewPage.map)),
+          _homeMenuButton(Icons.save_alt_rounded, 'YEDEK', _openBackupCenter),
+        ]),
+        SizedBox(height: compact ? 11 : 24),
       ]);
     });
   }
+
+  // V12: portable manual backups survive reinstall only when the user saves
+  // the copied code OUTSIDE the app (Notes, email, Drive, etc.).
+  Future<void> _openBackupCenter() async {
+    await _save();
+    final navContext = _navigatorKey.currentContext;
+    final prefs = _storage;
+    if (!mounted || navContext == null || prefs == null) return;
+    final values = <String, Object?>{
+      for (final key in V12BackupCodec.keys)
+        if (prefs.get(key) != null) key: prefs.get(key),
+    };
+    final code = V12BackupCodec.encode(values);
+    await showDialog<void>(
+      context: navContext,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('💾 Oyun yedeğim'),
+        content: const SingleChildScrollView(
+          child: Text('Bölümlerini, yıldızlarını, şeker paranı, '
+              'güçlendiricilerini ve görevlerini yedekle. '
+              'Kopyaladığın yedek kodunu NOTLAR veya e-posta gibi '
+              'oyun dışındaki güvenli bir yere kaydet. '
+              'Uygulamayı kaldırırsan sadece telefondaki kayıt silinebilir.'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: code));
+              if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+              final current = _navigatorKey.currentContext;
+              if (current != null && current.mounted) {
+                ScaffoldMessenger.of(current).showSnackBar(const SnackBar(
+                  content: Text('Yedek kodu kopyalandı. Şimdi Notlar’a yapıştırıp kaydet!'),
+                ));
+              }
+            },
+            child: const Text('KODU KOPYALA'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              _restoreBackupDialog();
+            },
+            child: const Text('YEDEK GERİ YÜKLE'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('KAPAT'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _restoreBackupDialog() async {
+    final navContext = _navigatorKey.currentContext;
+    if (navContext == null || !mounted) return;
+    final controller = TextEditingController();
+    final input = await showDialog<String>(
+      context: navContext,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Yedekten geri yükle'),
+        content: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text('Notlar’a kaydettiğin SB12- ile başlayan kodu yapıştır. '
+                'Onay verene kadar mevcut kayıt değişmeyecek.'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              maxLines: 4,
+              autocorrect: false,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: 'SB12-...',
+              ),
+            ),
+          ]),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('İPTAL'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(controller.text),
+            child: const Text('KODU KONTROL ET'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (!mounted || input == null || input.trim().isEmpty) return;
+    Map<String, Object> parsed;
+    try {
+      parsed = V12BackupCodec.decode(input);
+    } catch (_) {
+      final current = _navigatorKey.currentContext;
+      if (current != null && current.mounted) {
+        ScaffoldMessenger.of(current).showSnackBar(const SnackBar(
+          content: Text('Yedek kodu geçersiz; hiçbir kayıt değiştirilmedi.'),
+        ));
+      }
+      return;
+    }
+    final current = _navigatorKey.currentContext;
+    if (current == null || !current.mounted) return;
+    final approved = await showDialog<bool>(
+      context: current,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Kayıt üzerine yazılsın mı?'),
+        content: Text('Yedekteki ${parsed['unlocked']}. bölüm ilerlemesi '
+            've ödüller bu telefondaki ilerlemenin yerine geçecek. '
+            'İşlem geri alınamaz.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('VAZGEÇ'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('EVET, GERİ YÜKLE'),
+          ),
+        ],
+      ),
+    );
+    if (approved != true || !mounted) return;
+    final prefs = _storage;
+    if (prefs == null) return;
+    for (final key in V12BackupCodec.keys) {
+      final value = parsed[key];
+      if (value == null) {
+        await prefs.remove(key);
+      } else if (value is int) {
+        await prefs.setInt(key, value);
+      } else if (value is bool) {
+        await prefs.setBool(key, value);
+      } else if (value is String) {
+        await prefs.setString(key, value);
+      }
+    }
+    _stars.clear();
+    _game = null;
+    _daily = DailyProgress.fresh(DateTime.now());
+    _v6 = V6Progress();
+    _v7 = V7Progress(today: DateTime.now());
+    _v8 = V8SeasonProgress(today: DateTime.now());
+    _v9 = V9RewardsProgress(today: DateTime.now());
+    await _load();
+    await _audio.setEnabled(_sound);
+    if (!mounted) return;
+    setState(() { _page = ViewPage.home; _result = null; });
+    final after = _navigatorKey.currentContext;
+    if (after != null && after.mounted) {
+      ScaffoldMessenger.of(after).showSnackBar(const SnackBar(
+        content: Text('Yedek geri yüklendi. İlerlemen hazır!'),
+      ));
+    }
+  }
+
+  Widget _homeMenuButton(IconData icon, String title, VoidCallback action) =>
+      GestureDetector(
+        onTap: action,
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            width: 60, height: 57,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [
+                Color(0xFFFFF8D9), Color(0xFFFFA8D4), Color(0xFFED67AE)]),
+              borderRadius: BorderRadius.circular(19),
+              border: Border.all(color: Colors.white, width: 2.5),
+              boxShadow: const [BoxShadow(color: Color(0x674C2857),
+                  blurRadius: 11, offset: Offset(0, 5))],
+            ),
+            child: Icon(icon, size: 29, color: const Color(0xFF8D3584)),
+          ),
+          const SizedBox(height: 5),
+          Text(title, style: const TextStyle(color: Color(0xFF5B2363),
+              fontSize: 10, fontWeight: FontWeight.w900,
+              shadows: [Shadow(color: Colors.white, blurRadius: 4)])),
+        ]),
+      );
 
   Widget _mapPage() {
     return Column(children: [
@@ -1306,8 +1510,8 @@ class _SugarGardenState extends State<SugarGarden>
           _roundIcon(Icons.arrow_back_rounded,
               () => setState(() => _page = ViewPage.home)),
           const SizedBox(width: 12),
-          Expanded(child: Text('Şeker Dünyaları',
-              style: _titleStyle(27, const Color(0xFF8B36B5)))),
+          Expanded(child: Text('Şeker Yolu • V13',
+              style: _titleStyle(27, const Color(0xFFE94E96)))),
           _roundIcon(Icons.emoji_events_rounded, _openEventCenter),
           const SizedBox(width: 6),
           _roundIcon(Icons.storefront_rounded, _openShop),
@@ -1316,8 +1520,8 @@ class _SugarGardenState extends State<SugarGarden>
       Padding(padding: const EdgeInsets.symmetric(horizontal: 17),
         child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _pill('${math.min(_unlocked, v6LevelCount)} / $v6LevelCount',
-                const Color(0xFFDA5A82)),
+            _pill('SEVİYE ${math.min(_unlocked, v6LevelCount)} / $v6LevelCount',
+                const Color(0xFFE24F82)),
             _pill('🍬 ${_v6.coins}', const Color(0xFF8335A3)),
           ])),
       const SizedBox(height: 8),
@@ -1329,6 +1533,7 @@ class _SugarGardenState extends State<SugarGarden>
     ]);
   }
 
+  /// V12: scenic, winding path with the same level actions and keys as V11.
   Widget _worldPanel(V6World world) {
     final completed = [for (var level = world.start; level <= world.end; level++)
       if ((_stars[level] ?? 0) > 0) level].length;
@@ -1336,55 +1541,86 @@ class _SugarGardenState extends State<SugarGarden>
     final canClaim = _v6.canClaimChest(world.end, _stars);
     return Container(
       key: ValueKey('v6-world-${world.start}'),
-      margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.fromLTRB(12, 15, 12, 15),
+      margin: const EdgeInsets.only(bottom: 19),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        gradient: LinearGradient(colors: [Color(world.primary), Color(world.accent)],
-          begin: Alignment.topLeft, end: Alignment.bottomRight),
-        border: Border.all(color: const Color(0xFFFDE8FF), width: 2),
-        boxShadow: const [BoxShadow(color: Color(0x553A145C),
-          blurRadius: 8, offset: Offset(0, 5))],
+        borderRadius: BorderRadius.circular(28),
+        color: const Color(0xFFFFE5F5),
+        border: Border.all(color: const Color(0xFFFFE4A0), width: 5),
+        boxShadow: const [BoxShadow(color: Color(0x66471662),
+          blurRadius: 17, offset: Offset(0, 8))],
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(world.name.toUpperCase(), style: const TextStyle(
-          color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900,
-          shadows: [Shadow(color: Color(0x77000000), blurRadius: 4)])),
-        const SizedBox(height: 3),
-        Text('${world.subtitle} • $completed/20 tamamlandı',
-          style: const TextStyle(color: Colors.white, fontSize: 12,
-            fontWeight: FontWeight.w700)),
-        const SizedBox(height: 9),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 5, crossAxisSpacing: 7,
-            mainAxisSpacing: 9, childAspectRatio: .86),
-          itemCount: v6LevelsPerWorld,
-          itemBuilder: (context, index) => _levelNode(world.start + index),
-        ),
-        const SizedBox(height: 9),
-        SizedBox(width: double.infinity,
-          child: OutlinedButton.icon(
-            key: ValueKey('v6-chest-${world.end}'),
-            onPressed: canClaim ? () => _claimWorldChest(world.end) : null,
-            icon: Icon(claimed ? Icons.check_circle_rounded
-              : Icons.inventory_2_rounded),
-            label: Text(claimed ? 'DÜNYA SANDIĞI ALINDI ✓'
-                : canClaim ? 'DÜNYA SANDIĞINI AÇ  +150 🍬'
-                : 'SANDIK: ${world.end}. BÖLÜMÜ BİTİR'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF6D277B),
-              backgroundColor: const Color(0xF5FFFFFF),
-              disabledForegroundColor: const Color(0xFF755481),
-              disabledBackgroundColor: const Color(0x99FFFFFF),
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Column(children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(13, 12, 13, 12),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(colors: [
+                Color(0xFFFF8DC0), Color(0xFFE047A6), Color(0xFF9639A7)])),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('🌸 ${world.name.toUpperCase()}',
+                  style: const TextStyle(color: Colors.white, fontSize: 17,
+                    fontWeight: FontWeight.w900, shadows: [
+                      Shadow(color: Color(0x993B1453), blurRadius: 3, offset: Offset(0, 2))])),
+                Text('${world.subtitle}  •  $completed / 20 tamamlandı',
+                  style: const TextStyle(color: Color(0xFFFFF4D8),
+                    fontWeight: FontWeight.w800, fontSize: 12)),
+              ]),
+          ),
+          SizedBox(height: V12PathGeometry.height,
+            child: LayoutBuilder(builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              return Stack(children: [
+                const Positioned.fill(child: Image(
+                  image: AssetImage('assets/images/v13_map_scene.webp'),
+                  fit: BoxFit.cover,
+                  filterQuality: FilterQuality.high,
+                )),
+                const Positioned.fill(child: DecoratedBox(
+                  decoration: BoxDecoration(gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0x06FFFFFF), Color(0x06FFE6AA), Color(0x09D6F18F)])),
+                )),
+                const Positioned.fill(child: IgnorePointer(
+                  child: CustomPaint(painter: V12RoadPainter()),
+                )),
+                for (var i = 0; i < v6LevelsPerWorld; i++)
+                  Positioned(
+                    left: V12PathGeometry.levelCenter(i, width).dx - 31,
+                    top: V12PathGeometry.levelCenter(i, width).dy - 31,
+                    width: 62,
+                    height: 72,
+                    child: _levelNode(world.start + i),
+                  ),
+              ]);
+            }),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(11, 13, 11, 14),
+            child: SizedBox(width: double.infinity,
+              child: OutlinedButton.icon(
+                key: ValueKey('v6-chest-${world.end}'),
+                onPressed: canClaim ? () => _claimWorldChest(world.end) : null,
+                icon: Icon(claimed ? Icons.check_circle_rounded : Icons.inventory_2_rounded),
+                label: Text(claimed ? 'DÜNYA SANDIĞI ALINDI ✓'
+                    : canClaim ? 'DÜNYA SANDIĞINI AÇ  +150 🍬'
+                    : 'SANDIK: ${world.end}. BÖLÜMÜ BİTİR'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF713180),
+                  backgroundColor: const Color(0xFFFFF2D9),
+                  disabledForegroundColor: const Color(0xFF755481),
+                  disabledBackgroundColor: const Color(0xFFEBD4EE),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
+                ),
+              ),
             ),
           ),
-        ),
-      ]),
+        ]),
+      ),
     );
   }
 
@@ -1398,16 +1634,20 @@ class _SugarGardenState extends State<SugarGarden>
         Expanded(child: Container(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: unlocked ? const Color(0xFFFAE7FF)
-                : const Color(0xBB6A538B),
-            border: Border.all(color: Colors.white, width: 2),
-            boxShadow: const [BoxShadow(color: Color(0x55381861),
-                blurRadius: 3, offset: Offset(0, 2))],
+            gradient: unlocked ? const LinearGradient(
+              begin: Alignment.topLeft, end: Alignment.bottomRight,
+              colors: [Color(0xFFFFDFF0), Color(0xFFFF57AF), Color(0xFFD51979)])
+                : const LinearGradient(colors: [Color(0xFF8F839B),
+                    Color(0xFF665878)]),
+            border: Border.all(color: const Color(0xFFFFF1A8), width: 3.3),
+            boxShadow: const [BoxShadow(color: Color(0xB15E1762), blurRadius: 12, offset: Offset(0, 6)),
+                BoxShadow(color: Color(0x88FFFFFF), blurRadius: 8, offset: Offset(0, -2))],
           ),
           child: Center(child: unlocked
             ? Text('$level', style: const TextStyle(
-                color: Color(0xFF82389A), fontWeight: FontWeight.w900,
-                fontSize: 18))
+                color: Colors.white, fontWeight: FontWeight.w900,
+                fontSize: 18, shadows: [Shadow(color: Color(0x995B1359),
+                    blurRadius: 3, offset: Offset(0, 2))]))
             : const Icon(Icons.lock_rounded, color: Colors.white, size: 18)),
         )),
         Text(stars == 0 ? '☆☆☆' :
@@ -1435,7 +1675,7 @@ class _SugarGardenState extends State<SugarGarden>
               const SizedBox(width: 10),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                Text('BÖLÜM ${g.level}  •  V8', style: const TextStyle(
+                Text('BÖLÜM ${g.level}  •  V13', style: const TextStyle(
                     fontSize: 12, fontWeight: FontWeight.w900,
                     letterSpacing: 1.6, color: Color(0xFF77328B))),
                 Text(g.plan.name, maxLines: 1,
@@ -1458,9 +1698,10 @@ class _SugarGardenState extends State<SugarGarden>
             padding: EdgeInsets.symmetric(horizontal: 13,
                 vertical: compact ? 7 : 12),
             decoration: BoxDecoration(
-              color: const Color(0xEDFFFFFF),
+              gradient: const LinearGradient(colors: [
+                Color(0xFFFFFFFF), Color(0xFFFFF1D7), Color(0xFFFFDCEB)]),
               borderRadius: BorderRadius.circular(25),
-              border: Border.all(color: Colors.white, width: 2),
+              border: Border.all(color: const Color(0xFFFFEBA9), width: 3),
               boxShadow: const [BoxShadow(color: Color(0x309D359E),
                   blurRadius: 12, offset: Offset(0, 5))],
             ),
@@ -1468,7 +1709,7 @@ class _SugarGardenState extends State<SugarGarden>
               Container(width: 69, height: 70,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(colors: [
-                    Color(0xFFFFB743), Color(0xFFFF7542)]),
+                    Color(0xFFFF83B1), Color(0xFFD73383)]),
                   borderRadius: BorderRadius.circular(19),
                   boxShadow: const [BoxShadow(color: Color(0x50ED7950),
                       blurRadius: 8, offset: Offset(0, 4))],
@@ -1504,9 +1745,9 @@ class _SugarGardenState extends State<SugarGarden>
                   ClipRRect(borderRadius: BorderRadius.circular(20),
                     child: LinearProgressIndicator(
                       value: g.progress, minHeight: 13,
-                      backgroundColor: const Color(0xFFF4DDF6),
+                      backgroundColor: const Color(0xFFFFECBD),
                       valueColor: const AlwaysStoppedAnimation<Color>(
-                          Color(0xFFFB77A7)),
+                          Color(0xFFFF9D25)),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -1587,21 +1828,21 @@ class _SugarGardenState extends State<SugarGarden>
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft, end: Alignment.bottomRight,
-          colors: [Color(0xFFFFD778), Color(0xFFFF6FAE), Color(0xFFB458F0)]),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFFFF1C7), width: 6),
+          colors: [Color(0xFFFFECA7), Color(0xFFFFC95C), Color(0xFFE69A43)]),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: const Color(0xFFFFF7CF), width: 6),
         boxShadow: const [
           BoxShadow(color: Color(0x994D167A), blurRadius: 22, offset: Offset(0, 12)),
           BoxShadow(color: Color(0xAAFFFFFF), blurRadius: 6,
               offset: Offset(0, -3)),
         ],
       ),
-      child: ClipRRect(borderRadius: BorderRadius.circular(15),
+      child: ClipRRect(borderRadius: BorderRadius.circular(21),
         child: Stack(children: [
           const Positioned.fill(child: DecoratedBox(
             decoration: BoxDecoration(gradient: RadialGradient(
               center: Alignment(-.55, -.8), radius: 1.5,
-              colors: [Color(0xFF9158DC), Color(0xFF4F237E), Color(0xFF2E175B)],
+              colors: [Color(0xFF5676B7), Color(0xFF284C87), Color(0xFF132D57)],
             )),
           )),
           ...[for (var r = 0; r < gridSize; r++)
@@ -1615,11 +1856,11 @@ class _SugarGardenState extends State<SugarGarden>
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: (r + c).isEven
-                        ? const [Color(0xFFA765D8), Color(0xFF7343B2)]
-                        : const [Color(0xFF9354CA), Color(0xFF6831A8)],
+                        ? const [Color(0xFF5274AD), Color(0xFF294C84)]
+                        : const [Color(0xFF476BA9), Color(0xFF234476)],
                     ),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: const Color(0x44EAD4FF), width: .8),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xA2ABC9FC), width: 1.1),
                   ),
                 ),
               ),
@@ -1629,11 +1870,10 @@ class _SugarGardenState extends State<SugarGarden>
                 top: inset + _selected!.row * cell,
                 width: cell, height: cell,
                 child: Container(decoration: BoxDecoration(
-                  color: const Color(0x55FFFFFF),
-                  border: Border.all(color: Colors.white, width: 3),
-                  borderRadius: BorderRadius.circular(9),
-                  boxShadow: const [BoxShadow(color: Color(0xAAFFFFFF),
-                      blurRadius: 8)],
+                  color: const Color(0x66FFF7B6),
+                  border: Border.all(color: Colors.white, width: 3.2),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: const [BoxShadow(color: Color(0xDDFFF5A8), blurRadius: 14, spreadRadius: 1)],
                 )),
             ),
           ...[for (var r = 0; r < gridSize; r++)
@@ -1875,13 +2115,13 @@ class _SugarGardenState extends State<SugarGarden>
               decoration: BoxDecoration(
                 gradient: LinearGradient(begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color.lerp(color, Colors.white, .26)!, color]),
-                borderRadius: BorderRadius.circular(18),
+                    colors: [Color.lerp(color, Colors.white, .55)!, color, Color.lerp(color, Colors.black, .12)!]),
+                borderRadius: BorderRadius.circular(21),
                 border: Border.all(color: active
-                    ? const Color(0xFFFFFF58) : Colors.white,
-                    width: active ? 4 : 2),
-                boxShadow: const [BoxShadow(color: Color(0x559E4093),
-                    blurRadius: 7, offset: Offset(0, 4))],
+                    ? const Color(0xFFFFFF58) : const Color(0xFFFFEC9C),
+                    width: active ? 4 : 2.8),
+                boxShadow: const [BoxShadow(color: Color(0x889E4093),
+                    blurRadius: 13, offset: Offset(0, 6))],
               ),
               child: Icon(icon, color: Colors.white, size: 31,
                 shadows: const [Shadow(color: Color(0x555C206F),
@@ -1940,21 +2180,26 @@ class _SugarGardenState extends State<SugarGarden>
     onTap: onTap,
     child: Container(
       width: 40, height: 40,
-      decoration: BoxDecoration(color: const Color(0xF0FFFFFF),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white, width: 1.5),
-          boxShadow: const [BoxShadow(color: Color(0x329D45A5), blurRadius: 6,
-              offset: Offset(0, 3))]),
-      child: Icon(icon, color: const Color(0xFF9A3FC0), size: 24),
+      decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+            colors: [Color(0xFFFFFFFF), Color(0xFFFFEFF8)]),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white, width: 1.8),
+          boxShadow: const [
+            BoxShadow(color: Color(0x40FFA6D7), blurRadius: 10, offset: Offset(0, 3)),
+            BoxShadow(color: Color(0x309D45A5), blurRadius: 6, offset: Offset(0, 3))]),
+      child: Icon(icon, color: const Color(0xFFE54893), size: 24),
     ),
   );
 
   Widget _pill(String text, Color shade) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
     decoration: BoxDecoration(
-      color: const Color(0xEFFFFFFF),
+      gradient: const LinearGradient(colors: [Color(0xFFFFFFFF), Color(0xFFFFF0F8)]),
       borderRadius: BorderRadius.circular(24),
       border: Border.all(color: Colors.white, width: 2),
+      boxShadow: const [BoxShadow(color: Color(0x28C96CC3), blurRadius: 7, offset: Offset(0, 3))],
     ),
     child: Text(text, style: TextStyle(color: shade,
         fontSize: 12, fontWeight: FontWeight.w900)),
@@ -1962,8 +2207,8 @@ class _SugarGardenState extends State<SugarGarden>
 
   Widget _bigButton(String label, VoidCallback action,
       {bool small = false,
-       Color colorA = const Color(0xFFFFB83C),
-       Color colorB = const Color(0xFFFF653D)}) {
+       Color colorA = const Color(0xFF95EF46),
+       Color colorB = const Color(0xFF1AAD36)}) {
     return GestureDetector(
       onTap: action,
       child: Container(
@@ -1972,12 +2217,12 @@ class _SugarGardenState extends State<SugarGarden>
         alignment: Alignment.center,
         decoration: BoxDecoration(
           gradient: LinearGradient(begin: Alignment.topCenter,
-              end: Alignment.bottomCenter, colors: [colorA, colorB]),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: const Color(0xFFFFF1C8), width: 3),
+              end: Alignment.bottomCenter, colors: [Color.lerp(colorA, Colors.white, .18)!, colorA, colorB]),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: const Color(0xFFFFF4D9), width: 3),
           boxShadow: [
-            BoxShadow(color: colorB.withValues(alpha: .45), blurRadius: 8,
-                offset: const Offset(0, 7)),
+            BoxShadow(color: colorB.withValues(alpha: .38), blurRadius: 16, offset: const Offset(0, 8)),
+            const BoxShadow(color: Color(0x26FFFFFF), blurRadius: 2, offset: Offset(0, -2)),
           ],
         ),
         child: Text(label, textAlign: TextAlign.center,

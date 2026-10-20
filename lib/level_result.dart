@@ -67,7 +67,7 @@ class _LevelResultOverlayState extends State<LevelResultOverlay>
       children: [
         Positioned.fill(
           child: ColoredBox(
-            color: gold ? const Color(0xD956176D) : const Color(0xC936205E),
+            color: gold ? const Color(0x99501766) : const Color(0xBA36205E),
           ),
         ),
         if (gold)
@@ -118,10 +118,10 @@ class _LevelResultOverlayState extends State<LevelResultOverlay>
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFFFFFFF), Color(0xFFFFE6F5)],
+          colors: [Color(0xFFFFF8E4), Color(0xFFFFEAD9), Color(0xFFFFD7E7)],
         ),
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: const Color(0xFFFFE08A), width: 4),
+        border: Border.all(color: const Color(0xFFFFDF82), width: 4),
         boxShadow: const [
           BoxShadow(
             color: Color(0xA92F1251),
@@ -139,7 +139,7 @@ class _LevelResultOverlayState extends State<LevelResultOverlay>
               style: TextStyle(
                 color: win ? const Color(0xFFE8338A) :
                     const Color(0xFF8F4AAB),
-                fontSize: 30,
+                fontSize: 31,
                 fontWeight: FontWeight.w900,
                 shadows: const [
                   Shadow(color: Colors.white, offset: Offset(-1, -2)),
@@ -148,7 +148,7 @@ class _LevelResultOverlayState extends State<LevelResultOverlay>
                 ],
               )),
           const SizedBox(height: 4),
-          Text(win ? 'ŞEKER ŞÖLENİ!' : 'YENİDEN BAŞARABİLİRSİN',
+          Text(win ? 'BÖLÜM TAMAMLANDI!' : 'YENİDEN BAŞARABİLİRSİN',
               style: const TextStyle(
                 letterSpacing: 1.1,
                 fontSize: 11,
@@ -265,7 +265,7 @@ class _LevelResultOverlayState extends State<LevelResultOverlay>
             width: double.infinity,
             decoration: BoxDecoration(
               gradient: const LinearGradient(colors: [
-                Color(0xFFFFC14D), Color(0xFFFF763E),
+                Color(0xFF9AFD44), Color(0xFF00AA3D),
               ]),
               border: Border.all(color: const Color(0xFFFFE9A8), width: 3),
               borderRadius: BorderRadius.circular(19),
