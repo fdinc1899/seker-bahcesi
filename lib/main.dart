@@ -619,7 +619,8 @@ class _SugarGardenState extends State<SugarGarden>
                     ));
                   } : null,
                   icon: const Icon(Icons.redeem_rounded),
-                  label: Text(canClaim ? 'BUGÜNKÜ HEDİYENİ AL' : 'BUGÜN ALINDI ✓'),
+                  label: Text(canClaim ? 'BUGÜNKÜ HEDİYENİ AL' : 'BUGÜN ALINDI ✓',
+                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFFD62F94),
                     foregroundColor: Colors.white,
@@ -630,9 +631,14 @@ class _SugarGardenState extends State<SugarGarden>
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text('GÜNLÜK GÖREVLER', style: TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.w900,
-                  color: Color(0xFF8335A3))),
+                const Row(children: [
+                  Icon(Icons.auto_awesome_rounded,
+                    color: Color(0xFFFFA62D), size: 21),
+                  SizedBox(width: 7),
+                  Expanded(child: Text('GÜNLÜK GÖREVLER', style: TextStyle(
+                    fontSize: 18, fontWeight: FontWeight.w900,
+                    color: Color(0xFF652174)))),
+                ]),
                 const SizedBox(height: 5),
                 for (var task = 0; task < 3; task++) ...[
                   Container(
@@ -661,8 +667,9 @@ class _SugarGardenState extends State<SugarGarden>
                           Expanded(child: Text(_daily.title(task),
                             style: const TextStyle(fontWeight: FontWeight.w800,
                               color: Color(0xFF76338B)))),
-                          Text('${_daily.progress(task)}/${_daily.goal(task)}',
-                            style: const TextStyle(color: Color(0xFF934AA6))),
+                          Text('${_daily.progress(task).clamp(0, _daily.goal(task))}/${_daily.goal(task)}',
+                            style: const TextStyle(color: Color(0xFFB92381),
+                              fontWeight: FontWeight.w900, fontSize: 14)),
                         ]),
                         const SizedBox(height: 6),
                         LinearProgressIndicator(
@@ -673,7 +680,7 @@ class _SugarGardenState extends State<SugarGarden>
                           color: const Color(0xFFFF77AE)),
                         const SizedBox(height: 5),
                         Align(alignment: Alignment.centerRight,
-                          child: TextButton(
+                          child: FilledButton.icon(
                             key: ValueKey('daily-mission-$task'),
                             onPressed: _daily.canCollectMission(task) ? () {
                               final reward = _daily.collectMission(task);
@@ -683,8 +690,24 @@ class _SugarGardenState extends State<SugarGarden>
                               ScaffoldMessenger.of(dialogContext).showSnackBar(
                                 SnackBar(content: Text('Ödül: ${reward.description}')));
                             } : null,
-                            child: Text(_daily.rewarded.contains(task)
-                              ? 'ALINDI ✓' : 'ÖDÜLÜ AL'),
+                            icon: Icon(_daily.rewarded.contains(task)
+                              ? Icons.check_circle_rounded : Icons.redeem_rounded, size: 18),
+                            label: Text(_daily.rewarded.contains(task)
+                              ? 'ALINDI ✓' : 'ÖDÜLÜ AL',
+                              style: const TextStyle(fontWeight: FontWeight.w900,
+                                fontSize: 12)),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFFFFBD41),
+                              foregroundColor: const Color(0xFF6C2366),
+                              disabledBackgroundColor: const Color(0xFFF1E5EF),
+                              disabledForegroundColor: const Color(0xFF89708F),
+                              minimumSize: const Size(132, 44),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(17),
+                                side: BorderSide(color: _daily.canCollectMission(task)
+                                  ? const Color(0xFFFF8D34)
+                                  : const Color(0xFFD9C9DD), width: 1.5)),
+                            ),
                           )),
                       ],
                     ),
@@ -861,10 +884,30 @@ class _SugarGardenState extends State<SugarGarden>
           height: MediaQuery.sizeOf(context).height * .78,
           child: Column(children: [
             const SizedBox(height: 16),
-            const Text('🏆 ETKİNLİK MERKEZİ  •  V9',
-              key: ValueKey('v7-event-center'),
-              style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900,
-                  color: Color(0xFF88349C))),
+            Container(
+              key: const ValueKey('v7-event-center'),
+              margin: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [
+                  Color(0xFFFF66B6), Color(0xFFD927A6), Color(0xFF852BC5)]),
+                borderRadius: BorderRadius.circular(23),
+                border: Border.all(color: const Color(0xFFFFE3A8), width: 2.4),
+                boxShadow: const [BoxShadow(color: Color(0x665C235D),
+                  blurRadius: 9, offset: Offset(0, 5))],
+              ),
+              child: const Row(mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.emoji_events_rounded, color: Color(0xFFFFE19B), size: 29),
+                  SizedBox(width: 8),
+                  Flexible(child: Text('ETKİNLİK MERKEZİ  •  V9',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      shadows: [Shadow(color: Color(0x88501A77),
+                        blurRadius: 3, offset: Offset(0, 2))]))),
+                ]),
+            ),
             const SizedBox(height: 5),
             Text('🍬 ${_v6.coins}  •  Haftanın başlangıcı: ${_v7.week}',
               style: const TextStyle(fontWeight: FontWeight.w700,
@@ -956,15 +999,21 @@ class _SugarGardenState extends State<SugarGarden>
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         gradient: const LinearGradient(colors: [
-          Color(0xFFFFD5A3), Color(0xFFFFE6F9),
+          Color(0xFFFFE4A6), Color(0xFFFFD7EE),
         ]),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFF4B579), width: 1.5),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: const [BoxShadow(color: Color(0x33BD4596),
+          blurRadius: 8, offset: Offset(0, 4))],
+        border: Border.all(color: const Color(0xFFF7B94B), width: 2),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('🎡 GÜNLÜK ŞANS ÇARKI  •  V9',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900,
-                color: Color(0xFF8C3C85))),
+        const Row(children: [
+          Icon(Icons.casino_rounded, color: Color(0xFFB742BB), size: 29),
+          SizedBox(width: 8),
+          Expanded(child: Text('GÜNLÜK ŞANS ÇARKI  •  V9',
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900,
+              color: Color(0xFF712179)))),
+        ]),
         const SizedBox(height: 5),
         Text(used && index != null
             ? 'Bugünkü ödül: ${v9WheelRewards[index].name}'
@@ -977,7 +1026,15 @@ class _SugarGardenState extends State<SugarGarden>
             key: const ValueKey('v9-open-wheel'),
             onPressed: () => _openV9Wheel(refresh),
             icon: const Icon(Icons.autorenew_rounded),
-            label: Text(used ? 'ÇARKI GÖR' : 'ÇARKI ÇEVİR'),
+            label: Text(used ? 'ÇARKI GÖR' : 'ÇARKI ÇEVİR',
+              style: const TextStyle(fontWeight: FontWeight.w900)),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFC32CB2),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(22))),
           ),
         ),
       ]),
@@ -989,46 +1046,80 @@ class _SugarGardenState extends State<SugarGarden>
       key: const ValueKey('v9-collection-card'),
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7EDFF),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFD7BAF1)),
+        gradient: const LinearGradient(colors: [
+          Color(0xFFFFF5FD), Color(0xFFFFEAF2)]),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFF6BF69), width: 2),
+        boxShadow: const [BoxShadow(color: Color(0x2CA42A79),
+          blurRadius: 9, offset: Offset(0, 4))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('🍭 ŞEKER KOLEKSİYONU  •  V9',
-          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900,
-              color: Color(0xFF873599))),
+        const Row(children: [
+          Icon(Icons.auto_awesome_rounded, color: Color(0xFFE83D9A), size: 24),
+          SizedBox(width: 7),
+          Expanded(child: Text('ŞEKER KOLEKSİYONU  •  V9',
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900,
+              color: Color(0xFF6F257A)))),
+        ]),
         const SizedBox(height: 4),
         const Text('Her renkten 45 şeker patlat, 100 🍬 kazan. Her renk ödülü bir kez alınır.',
           style: TextStyle(fontSize: 11, color: Color(0xFF7A5285))),
         for (var i = 0; i < v9CollectionColorNames.length; i++) ...[
           const SizedBox(height: 9),
-          Row(children: [
-            Container(width: 20, height: 20,
-              decoration: BoxDecoration(color: candyPalette[i],
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2))),
-            const SizedBox(width: 6),
-            Expanded(child: Text(v9CollectionColorNames[i],
-              style: const TextStyle(fontWeight: FontWeight.w800,
-                  fontSize: 12, color: Color(0xFF783985)))),
-            Text('${_v9.colorCounts[i].clamp(0, v9CollectionGoal)}/$v9CollectionGoal',
-              style: const TextStyle(fontSize: 11)),
-            const SizedBox(width: 5),
-            SizedBox(width: 96, child: TextButton(
-              key: ValueKey('v9-color-claim-$i'),
-              onPressed: _v9.canClaimColor(i)
-                  ? () => _claimV9Color(i, refresh) : null,
-              child: Text(_v9.collectionClaims.contains(i)
-                  ? 'ALINDI ✓' : '100 🍬 AL',
-                style: const TextStyle(fontSize: 10)),
-            )),
-          ]),
-          LinearProgressIndicator(
-            value: (_v9.colorCounts[i] / v9CollectionGoal)
-                .clamp(0.0, 1.0).toDouble(),
-            minHeight: 5,
-            backgroundColor: const Color(0xFFE6D9EB),
-            color: candyPalette[i],
+          Container(
+            padding: const EdgeInsets.fromLTRB(10, 9, 8, 9),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFFFDEA3), width: 1.3),
+            ),
+            child: Column(children: [
+              Row(children: [
+                Container(width: 25, height: 25,
+                  decoration: BoxDecoration(color: candyPalette[i],
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2.5),
+                    boxShadow: const [BoxShadow(color: Color(0x4A4B246C),
+                      blurRadius: 4, offset: Offset(0, 2))])),
+                const SizedBox(width: 7),
+                Expanded(child: Text(v9CollectionColorNames[i],
+                  style: const TextStyle(fontWeight: FontWeight.w900,
+                    fontSize: 13, color: Color(0xFF653174)))),
+                Text('${_v9.colorCounts[i].clamp(0, v9CollectionGoal)}/$v9CollectionGoal',
+                  style: const TextStyle(fontSize: 12,
+                    fontWeight: FontWeight.w800, color: Color(0xFF733783))),
+                const SizedBox(width: 5),
+                SizedBox(width: 91, child: FilledButton(
+                  key: ValueKey('v9-color-claim-$i'),
+                  onPressed: _v9.canClaimColor(i)
+                    ? () => _claimV9Color(i, refresh) : null,
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    backgroundColor: const Color(0xFFFFCB59),
+                    foregroundColor: const Color(0xFF692369),
+                    disabledBackgroundColor: const Color(0xFFF0EAF2),
+                    disabledForegroundColor: const Color(0xFF9C89A0),
+                    minimumSize: const Size(82, 38),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14))),
+                  child: FittedBox(child: Text(_v9.collectionClaims.contains(i)
+                    ? 'ALINDI ✓' : '100 🍬 AL',
+                    style: const TextStyle(fontSize: 10,
+                      fontWeight: FontWeight.w900))),
+                )),
+              ]),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(9),
+                child: LinearProgressIndicator(
+                  value: (_v9.colorCounts[i] / v9CollectionGoal)
+                    .clamp(0.0, 1.0).toDouble(),
+                  minHeight: 8,
+                  backgroundColor: const Color(0xFFEDE4F1),
+                  color: candyPalette[i],
+                ),
+              ),
+            ]),
           ),
         ],
       ]),

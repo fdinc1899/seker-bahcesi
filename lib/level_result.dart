@@ -113,7 +113,7 @@ class _LevelResultOverlayState extends State<LevelResultOverlay>
     final win = widget.won;
     return Container(
       width: 360,
-      padding: const EdgeInsets.fromLTRB(17, 24, 17, 17),
+      padding: const EdgeInsets.fromLTRB(14, 17, 14, 15),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
@@ -134,26 +134,39 @@ class _LevelResultOverlayState extends State<LevelResultOverlay>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(win ? 'TEBRİKLER!' : 'TEKRAR DENE!',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: win ? const Color(0xFFE8338A) :
-                    const Color(0xFF8F4AAB),
-                fontSize: 31,
-                fontWeight: FontWeight.w900,
-                shadows: const [
-                  Shadow(color: Colors.white, offset: Offset(-1, -2)),
-                  Shadow(color: Color(0x66562272), blurRadius: 5,
-                      offset: Offset(2, 4)),
-                ],
-              )),
-          const SizedBox(height: 4),
+          Container(
+            key: const ValueKey('v15-2-celebration-header'),
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 8),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [
+                Color(0xFFFF67B8), Color(0xFFF22A91), Color(0xFFA02ABF)]),
+              borderRadius: BorderRadius.circular(25),
+              border: Border.all(color: const Color(0xFFFFE69C), width: 3),
+              boxShadow: const [BoxShadow(color: Color(0x66532383),
+                blurRadius: 11, offset: Offset(0, 5))],
+            ),
+            child: Row(mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(win ? Icons.celebration_rounded : Icons.favorite_rounded,
+                  color: const Color(0xFFFFE17D), size: 28),
+                const SizedBox(width: 6),
+                Flexible(child: Text(win ? 'TEBRİKLER!' : 'TEKRAR DENE!',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 29, fontWeight: FontWeight.w900,
+                    shadows: [Shadow(color: Color(0xA4602268),
+                      blurRadius: 4, offset: Offset(0, 2))]))),
+              ]),
+          ),
+          const SizedBox(height: 12),
           Text(win ? 'BÖLÜM TAMAMLANDI!' : 'YENİDEN BAŞARABİLİRSİN',
               style: const TextStyle(
                 letterSpacing: 1.1,
-                fontSize: 11,
+                fontSize: 13,
                 fontWeight: FontWeight.w900,
-                color: Color(0xFF944FB1),
+                color: Color(0xFF6A2378),
               )),
           const SizedBox(height: 12),
           Row(
