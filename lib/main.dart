@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'match_voice.dart';
+import 'v15_6_super_fx.dart';
 import 'v15_5_visuals.dart';
 import 'candy_art.dart';
 import 'game_engine.dart';
@@ -70,6 +71,7 @@ class _SugarGardenState extends State<SugarGarden>
   Set<int> _newborn = {};
   List<Offset> _burstPositions = [];
   List<Color> _burstColors = [];
+  int _v156Tier = 0;
   List<Cell> _hintCells = [];
   int _burstPoints = 0;
   int _comboCount = 0;
@@ -346,6 +348,7 @@ class _SugarGardenState extends State<SugarGarden>
         _comboCount = chain;
         _burstPoints = matched.length * (100 + (chain - 1) * 55) +
             math.max(0, matched.length - 3) * 60;
+        _v156Tier = v156BurstTier(matched.length, chain);
         _vanishing = matched
             .map((cell) => g.board[cell.row][cell.col]?.id)
             .whereType<int>()
@@ -356,7 +359,8 @@ class _SugarGardenState extends State<SugarGarden>
                 : wave.spawns.isNotEmpty ? 'ÖZEL ŞEKER!'
                 : matched.length >= 10 ? 'MEGA PATLAMA!'
                 : matched.length >= 5 ? 'MUHTEŞEM!' : 'HARİKA!';
-        _comboBanner = _message;
+        // V15.6: tiered visual callouts, original voice/message stays.
+        _comboBanner = v156Celebration(matched.length, chain);
       });
       // V15.4: Match celebration voice; never awaits or interrupts the board.
       _voice.sayForMatch(matched.length, chain: chain);
@@ -1656,7 +1660,7 @@ class _SugarGardenState extends State<SugarGarden>
               boxShadow: const [BoxShadow(color: Color(0x4D52246A),
                 blurRadius: 7, offset: Offset(0, 3))],
             ),
-            child: Text('Şeker Yolu • V15.5', maxLines: 1,
+            child: Text('Şeker Yolu • V15.6', maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: _titleStyle(20, const Color(0xFF671C73))),
           )),
@@ -1845,7 +1849,7 @@ class _SugarGardenState extends State<SugarGarden>
                 ),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('BÖLÜM ${g.level}  •  V15.5', maxLines: 1,
+                    Text('BÖLÜM ${g.level}  •  V15.6', maxLines: 1,
                       style: const TextStyle(fontSize: 11,
                         fontWeight: FontWeight.w900, letterSpacing: .5,
                         color: Color(0xFF64236D))),
@@ -2133,6 +2137,18 @@ class _SugarGardenState extends State<SugarGarden>
               ),
             ),
           ))),
+          // V15.6: non-interactive rings, flying stars, and candy light bursts.
+          Positioned.fill(child: IgnorePointer(child: AnimatedBuilder(
+            animation: _burstAnimation,
+            builder: (context, _) => CustomPaint(
+              painter: V156SuperBurstPainter(
+                progress: _burstAnimation.value,
+                centers: _burstPositions,
+                colors: _burstColors,
+                tier: _v156Tier,
+              ),
+            ),
+          ))),
           // V15.5: extra glitter synchronized with the existing burst animation.
           Positioned.fill(child: IgnorePointer(child: AnimatedBuilder(
             animation: _burstAnimation,
@@ -2169,38 +2185,11 @@ class _SugarGardenState extends State<SugarGarden>
                   child: Transform.rotate(
                     angle: math.sin(p * math.pi * 5) * (1 - p) * .045,
                     child: Transform.scale(scale: scale,
-                      child: Container(
-                        constraints: BoxConstraints(maxWidth: side * .90),
-                        padding: EdgeInsets.symmetric(
-                            horizontal: side * .042, vertical: 8),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(colors: [
-                            Color(0xFFE8419C), Color(0xFFAD43C9),
-                          ]),
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: Colors.white, width: 2.5),
-                          boxShadow: const [
-                            BoxShadow(color: Color(0xB0FFB236), blurRadius: 18,
-                                spreadRadius: 3),
-                            BoxShadow(color: Color(0xAA7325BC), blurRadius: 13,
-                                offset: Offset(0, 6)),
-                          ],
-                        ),
-                        child: Text(_comboBanner,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: side * .066,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: .4,
-                            color: const Color(0xFFFFF9C2),
-                            shadows: const [
-                              Shadow(color: Color(0xFFFF5D52), blurRadius: 6,
-                                  offset: Offset(0, 2)),
-                              Shadow(color: Color(0xFF71217E), blurRadius: 4,
-                                  offset: Offset(0, 3)),
-                            ],
-                          ),
-                        ),
+                      child: V156ComboBanner(
+                        text: _comboBanner,
+                        progress: p,
+                        boardSize: side,
+                        tier: _v156Tier,
                       ),
                     ),
                   ),
