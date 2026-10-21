@@ -1411,7 +1411,7 @@ class _SugarGardenState extends State<SugarGarden>
             const SizedBox(width: 7),
             _roundIcon(Icons.emoji_events_rounded, _openEventCenter),
             const Spacer(),
-            _pill('🍬 ${_v6.coins}', const Color(0xFFB16A1F)),
+            _premiumCoinPill(),
             const SizedBox(width: 6),
             _roundIcon(_sound ? Icons.volume_up_rounded : Icons.volume_off_rounded,
                 _toggleSound),
@@ -1612,38 +1612,42 @@ class _SugarGardenState extends State<SugarGarden>
     }
   }
 
-  Widget _homeMenuButton(IconData icon, String title, VoidCallback action) =>
-      GestureDetector(
-        onTap: action,
+    // V157_PREMIUM_ICONS: assets from approved design, actions unchanged.
+  Widget _homeMenuButton(IconData icon, String title, VoidCallback action) {
+    String? name;
+    if (icon == Icons.storefront_rounded) name = 'bottom_shop';
+    if (icon == Icons.task_alt_rounded) name = 'bottom_tasks';
+    if (icon == Icons.card_giftcard_rounded) name = 'bottom_event';
+    if (icon == Icons.map_rounded) name = 'bottom_map';
+    if (icon == Icons.save_alt_rounded) name = 'bottom_backup';
+    if (name == null) return const SizedBox.shrink();
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: action,
+      child: Semantics(
+        label: title,
+        button: true,
         child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Image.asset('assets/images/v15_7_$name.png',
+              width: 61, height: 60, fit: BoxFit.contain,
+              filterQuality: FilterQuality.high,
+              excludeFromSemantics: true),
+          const SizedBox(height: 2),
           Container(
-            width: 60, height: 57,
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [
-                Color(0xFFFFF8D9), Color(0xFFFFA8D4), Color(0xFFED67AE)]),
-              borderRadius: BorderRadius.circular(19),
-              border: Border.all(color: Colors.white, width: 2.5),
-              boxShadow: const [BoxShadow(color: Color(0x674C2857),
-                  blurRadius: 11, offset: Offset(0, 5))],
-            ),
-            child: Icon(icon, size: 29, color: const Color(0xFF8D3584)),
-          ),
-          const SizedBox(height: 5),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-            decoration: BoxDecoration(
-              color: const Color(0xF9FFF8F1),
-              borderRadius: BorderRadius.circular(9),
-              border: Border.all(color: const Color(0xFFFFD692), width: 1.2),
-            ),
-            child: Text(title, maxLines: 1, textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFF5D1B69),
-                fontSize: 10, fontWeight: FontWeight.w900, height: 1.0)),
+                color: const Color(0xF9FFF4E8),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.white, width: 1)),
+            child: Text(title, style: const TextStyle(
+                color: Color(0xFF592164), fontWeight: FontWeight.w900,
+                fontSize: 10, shadows: [Shadow(color: Colors.white, blurRadius: 2)])),
           ),
         ]),
-      );
+      ),
+    );
+  }
 
-  // V15.1 readability panels: scenery stays, text contrast improves.
   Widget _mapPage() {
     return Column(children: [
       Padding(padding: const EdgeInsets.fromLTRB(16, 9, 16, 12),
@@ -2383,20 +2387,59 @@ class _SugarGardenState extends State<SugarGarden>
     ],
   );
 
-  Widget _roundIcon(IconData icon, VoidCallback onTap) => GestureDetector(
-    onTap: onTap,
+    Widget _roundIcon(IconData icon, VoidCallback onTap) {
+    String? asset;
+    String label = 'Dugme';
+    if (icon == Icons.help_outline_rounded) {
+      asset = 'top_help'; label = 'Yardim';
+    } else if (icon == Icons.card_giftcard_rounded) {
+      asset = 'top_gift'; label = 'Gunluk hediyeler';
+    } else if (icon == Icons.emoji_events_rounded) {
+      asset = 'top_trophy'; label = 'Etkinlik merkezi';
+    } else if (icon == Icons.volume_up_rounded) {
+      asset = 'top_sound'; label = 'Sesi kapat';
+    } else if (icon == Icons.volume_off_rounded) {
+      asset = 'top_sound_off'; label = 'Sesi ac';
+    }
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Semantics(button: true, label: label,
+        child: asset != null
+          ? Image.asset('assets/images/v15_7_$asset.png',
+              width: 45, height: 45, fit: BoxFit.contain,
+              filterQuality: FilterQuality.high, excludeFromSemantics: true)
+          : Container(
+              width: 40, height: 40,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF5FE),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white, width: 2)),
+              child: Icon(icon, color: const Color(0xFFE54893), size: 24)),
+      ),
+    );
+  }
+
+    Widget _premiumCoinPill() => GestureDetector(
+    onTap: _openShop,
     child: Container(
-      width: 40, height: 40,
+      height: 42,
+      padding: const EdgeInsets.symmetric(horizontal: 5),
       decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft, end: Alignment.bottomRight,
-            colors: [Color(0xFFFFFFFF), Color(0xFFFFEFF8)]),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white, width: 1.8),
-          boxShadow: const [
-            BoxShadow(color: Color(0x40FFA6D7), blurRadius: 10, offset: Offset(0, 3)),
-            BoxShadow(color: Color(0x309D45A5), blurRadius: 6, offset: Offset(0, 3))]),
-      child: Icon(icon, color: const Color(0xFFE54893), size: 24),
+        color: const Color(0xFFFFFAEF),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFFFBF57), width: 2),
+        boxShadow: const [BoxShadow(color: Color(0x448F4B60), blurRadius: 5,
+            offset: Offset(0, 3))]),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Image.asset('assets/images/v15_7_coin.png', width: 30,
+            height: 30, fit: BoxFit.contain),
+        const SizedBox(width: 3),
+        Text('${_v6.coins}', style: const TextStyle(color: Color(0xFF9A4913),
+            fontWeight: FontWeight.w900, fontSize: 16)),
+        const SizedBox(width: 4),
+        const Icon(Icons.add_circle, color: Color(0xFF22C943), size: 20),
+      ]),
     ),
   );
 
