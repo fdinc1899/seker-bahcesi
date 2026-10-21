@@ -1251,7 +1251,21 @@ class _SugarGardenState extends State<SugarGarden>
     final label = '${tier.reward.coins} 🍬'
         '${tier.reward.hammers > 0 ? '  •  +${tier.reward.hammers} çekiç' : ''}'
         '${tier.reward.shuffles > 0 ? '  •  +${tier.reward.shuffles} karıştırma' : ''}';
-    return Card(color: Colors.white, margin: const EdgeInsets.only(top: 8),
+    // V159_WEEKLY_BADGE_SKIN - interactive content is unchanged.
+    return Container(
+      margin: const EdgeInsets.only(top: 11),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(21),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+          colors: [Color(0xFFFFF6DB), Color(0xFFFFDEEF), Color(0xFFF1C9FA)]),
+        image: const DecorationImage(
+          image: AssetImage('assets/images/v15_9_premium_card.webp'),
+          fit: BoxFit.cover),
+        border: Border.all(color: const Color(0xFFFFC65E), width: 2.2),
+        boxShadow: const [BoxShadow(color: Color(0x55A43B89),
+          blurRadius: 10, offset: Offset(0, 4))],
+      ),
       child: Padding(padding: const EdgeInsets.all(11), child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1265,14 +1279,24 @@ class _SugarGardenState extends State<SugarGarden>
           const SizedBox(height: 7),
           LinearProgressIndicator(
             value: (progress / tier.goal).clamp(0.0, 1.0).toDouble(),
-            minHeight: 7, backgroundColor: const Color(0xFFF3E4F5),
-            color: const Color(0xFFE979C3)),
+            minHeight: 10, backgroundColor: const Color(0xFFF3E4F5),
+            color: const Color(0xFFE839A9)),
           const SizedBox(height: 7),
           Row(children: [
             Expanded(child: Text(label,
               style: const TextStyle(fontSize: 12, color: Color(0xFF88568C)))),
-            TextButton(
+            FilledButton(
               key: ValueKey('v7-weekly-$index'),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFCE31B0),
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: const Color(0xFFEBDCEA),
+                disabledForegroundColor: const Color(0xFF806C86),
+                padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+                minimumSize: const Size(112, 39),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(19),
+                  side: const BorderSide(color: Color(0xFFFFD45F), width: 1.6))),
               onPressed: canClaim ? () => _claimV7Week(index, refresh) : null,
               child: Text(done ? 'ALINDI ✓' : 'ÖDÜLÜ AL'),
             ),
@@ -1286,7 +1310,21 @@ class _SugarGardenState extends State<SugarGarden>
     final progress = v7BadgeProgress(badge, _stars);
     final done = _v7.claimedBadges.contains(badge.id);
     final canClaim = _v7.canClaimBadge(badge, _stars);
-    return Card(color: Colors.white, margin: const EdgeInsets.only(top: 8),
+    // V159_WEEKLY_BADGE_SKIN - interactive content is unchanged.
+    return Container(
+      margin: const EdgeInsets.only(top: 11),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(21),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+          colors: [Color(0xFFFFF6DB), Color(0xFFFFDEEF), Color(0xFFF1C9FA)]),
+        image: const DecorationImage(
+          image: AssetImage('assets/images/v15_9_premium_card.webp'),
+          fit: BoxFit.cover),
+        border: Border.all(color: const Color(0xFFFFC65E), width: 2.2),
+        boxShadow: const [BoxShadow(color: Color(0x55A43B89),
+          blurRadius: 10, offset: Offset(0, 4))],
+      ),
       child: Padding(padding: const EdgeInsets.all(11), child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1305,14 +1343,24 @@ class _SugarGardenState extends State<SugarGarden>
           const SizedBox(height: 7),
           LinearProgressIndicator(
             value: (progress / badge.goal).clamp(0.0, 1.0).toDouble(),
-            minHeight: 6, backgroundColor: const Color(0xFFF3E4F5),
-            color: const Color(0xFFEFB859)),
+            minHeight: 10, backgroundColor: const Color(0xFFF3E4F5),
+            color: const Color(0xFFFFB52C)),
           Row(children: [
             Expanded(child: Text('+${badge.reward.coins} 🍬',
               style: const TextStyle(fontWeight: FontWeight.w700,
                   color: Color(0xFF88568C)))),
-            TextButton(
+            FilledButton(
               key: ValueKey('v7-badge-${badge.id}'),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFCE31B0),
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: const Color(0xFFEBDCEA),
+                disabledForegroundColor: const Color(0xFF806C86),
+                padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+                minimumSize: const Size(112, 39),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(19),
+                  side: const BorderSide(color: Color(0xFFFFD45F), width: 1.6))),
               onPressed: canClaim ? () => _claimV7Badge(badge, refresh) : null,
               child: Text(done ? 'ALINDI ✓' : 'ROZETİ AL'),
             ),
