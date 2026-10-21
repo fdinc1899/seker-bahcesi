@@ -25,6 +25,8 @@ jobs:
           cache: true
       - name: Android kaynaklarini olustur
         run: flutter create --platforms=android --project-name seker_bahcesi .
+      - name: V15.10 premium Android acilis ekrani
+        run: python3 tools/v15_10_native_splash.py
       - name: Kalici V15 imzasi ve paket kimligi
         env:
           SEKER_V15_P12_B64: ${{ secrets.SEKER_V15_P12_B64 }}

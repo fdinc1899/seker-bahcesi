@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'v15_10_splash.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -45,6 +46,7 @@ class _SugarGardenState extends State<SugarGarden>
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   SharedPreferences? _storage;
   bool _loading = true;
+  bool _v1510ShowSplash = true; // V1510_PREMIUM_SPLASH
   bool _sound = true;
   ViewPage _page = ViewPage.home;
   MatchEngine? _game;
@@ -84,6 +86,10 @@ class _SugarGardenState extends State<SugarGarden>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Minimum brand display time; release only after saves are loaded.
+    Future<void>.delayed(const Duration(milliseconds: 1900), () {
+      if (mounted) setState(() => _v1510ShowSplash = false);
+    });
     _burstAnimation = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 950));
     _hintAnimation = AnimationController(
@@ -1414,6 +1420,22 @@ class _SugarGardenState extends State<SugarGarden>
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      // V1510_PREMIUM_SPLASH: wrap the existing Navigator; game screens untouched.
+      builder: (context, child) => Stack(
+        fit: StackFit.expand,
+        children: [
+          if (child != null) child,
+          Positioned.fill(child: IgnorePointer(
+            ignoring: !(_v1510ShowSplash || _loading),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 500),
+              child: (_v1510ShowSplash || _loading)
+                ? const V1510PremiumSplash(key: ValueKey('v1510-intro'))
+                : const SizedBox.expand(key: ValueKey('v1510-done')),
+            ),
+          )),
+        ],
+      ),
       navigatorKey: _navigatorKey,
       title: 'Şeker Bahçesi',
       debugShowCheckedModeBanner: false,
