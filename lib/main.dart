@@ -889,11 +889,22 @@ class _SugarGardenState extends State<SugarGarden>
     showModalBottomSheet<void>(
       context: navContext,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFFFFF4FD),
+      backgroundColor: Colors.transparent,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(26))),
       builder: (sheetContext) => StatefulBuilder(
-        builder: (context, refresh) => SafeArea(child: SizedBox(
+        // V158_EVENT_SKIN - background is decoration, all buttons remain native.
+        builder: (context, refresh) => SafeArea(child: Container(
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+            border: Border.all(color: const Color(0xFFFFD77A), width: 2.7),
+            image: const DecorationImage(
+              image: AssetImage('assets/images/v15_8_event_background.webp'),
+              fit: BoxFit.cover),
+            boxShadow: const [BoxShadow(color: Color(0x66782A6C),
+              blurRadius: 15, offset: Offset(0, -3))],
+          ),
+          child: SizedBox(
           height: MediaQuery.sizeOf(context).height * .90,
           child: Column(children: [
             const SizedBox(height: 16),
@@ -962,7 +973,7 @@ class _SugarGardenState extends State<SugarGarden>
               ],
             )),
           ]),
-        )),
+        ))),
       ),
     );
   }
@@ -1011,9 +1022,10 @@ class _SugarGardenState extends State<SugarGarden>
       key: const ValueKey('v9-wheel-card'),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [
-          Color(0xFFFFE4A6), Color(0xFFFFD7EE),
-        ]),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+          colors: [Color(0xFFFFE2A5), Color(0xFFFFC9E7),
+            Color(0xFFEDBAFA)]),
         borderRadius: BorderRadius.circular(22),
         boxShadow: const [BoxShadow(color: Color(0x33BD4596),
           blurRadius: 8, offset: Offset(0, 4))],
@@ -1059,8 +1071,10 @@ class _SugarGardenState extends State<SugarGarden>
       key: const ValueKey('v9-collection-card'),
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [
-          Color(0xFFFFF5FD), Color(0xFFFFEAF2)]),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+          colors: [Color(0xFFF9D9FC), Color(0xFFF9D5F1),
+            Color(0xFFFFE2BF)]),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: const Color(0xFFF6BF69), width: 2),
         boxShadow: const [BoxShadow(color: Color(0x2CA42A79),
@@ -1082,7 +1096,8 @@ class _SugarGardenState extends State<SugarGarden>
           Container(
             padding: const EdgeInsets.fromLTRB(10, 9, 8, 9),
             decoration: BoxDecoration(
-              color: Colors.white,
+              gradient: const LinearGradient(colors: [
+                Color(0xFFFFF8FA), Color(0xFFFFEAF7)]),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: const Color(0xFFFFDEA3), width: 1.3),
             ),
