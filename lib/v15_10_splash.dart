@@ -1,8 +1,8 @@
-// V1510_PREMIUM_SPLASH - startup presentation only; no game/save logic.
+// V1510_PREMIUM_SPLASH / V1511_CANDY_SPLASH_REDESIGN
+// Brand-only presentation. Do not change game state, sound, or save data.
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-/// Animated visual shown briefly as Flutter's first route becomes ready.
 class V1510PremiumSplash extends StatefulWidget {
   const V1510PremiumSplash({super.key});
 
@@ -12,110 +12,43 @@ class V1510PremiumSplash extends StatefulWidget {
 
 class _V1510PremiumSplashState extends State<V1510PremiumSplash>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _glow;
+  late final AnimationController _animation;
 
   @override
   void initState() {
     super.initState();
-    _glow = AnimationController(
+    _animation = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1900),
-    )..forward();
+      duration: const Duration(milliseconds: 2200),
+    )..repeat();
   }
 
   @override
   void dispose() {
-    _glow.dispose();
+    _animation.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFFF1B4D6),
+      color: const Color(0xFF93D7F7),
       child: Stack(
         fit: StackFit.expand,
-        children: [
-          Image.asset('assets/images/v15_10_splash_world.webp',
-            fit: BoxFit.cover, filterQuality: FilterQuality.high),
-          const DecoratedBox(decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter, end: Alignment.bottomCenter,
-              colors: [Color(0x3373237D), Color(0x00000000), Color(0x661B164B)],
-              stops: [0, .47, 1],
-            ),
-          )),
-          AnimatedBuilder(
-            animation: _glow,
-            builder: (context, child) => Align(
-              alignment: const Alignment(0, -0.21),
-              child: Transform.scale(
-                scale: 0.98 + _glow.value * .045,
-                child: child,
-              ),
-            ),
-            child: FractionallySizedBox(
-              widthFactor: .89,
-              child: Image.asset('assets/images/v15_10_splash_logo.png',
-                fit: BoxFit.contain, filterQuality: FilterQuality.high,
-                semanticLabel: 'Şeker Bahçesi'),
-            ),
+        children: <Widget>[
+          // A single fully composed illustration; avoid overlapping logos or banners.
+          Image.asset(
+            'assets/images/v15_11_splash_art.webp',
+            fit: BoxFit.cover,
+            filterQuality: FilterQuality.high,
+            gaplessPlayback: true,
           ),
-          AnimatedBuilder(
-            animation: _glow,
-            builder: (context, child) => CustomPaint(
-              painter: _V1510SparklePainter(_glow.value),
-              child: const SizedBox.expand(),
-            ),
-          ),
-          Align(
-            alignment: const Alignment(0, .76),
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 36),
-                child: Container(
-                  constraints: const BoxConstraints(maxWidth: 340),
-                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 17),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: [
-                      Color(0xFFFDF0F7), Color(0xFFFFE8D5),
-                    ]),
-                    borderRadius: BorderRadius.circular(28),
-                    border: Border.all(color: const Color(0xFFFFD16F), width: 2.5),
-                    boxShadow: const [BoxShadow(
-                      color: Color(0x885C267A), blurRadius: 17,
-                      offset: Offset(0, 6),
-                    )],
-                  ),
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    const FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text('ŞEKER DİYARI YÜKLENİYOR',
-                        style: TextStyle(
-                          fontSize: 15, color: Color(0xFF84306F),
-                          fontWeight: FontWeight.w900, letterSpacing: .4,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: SizedBox(
-                        height: 8,
-                        child: AnimatedBuilder(
-                          animation: _glow,
-                          builder: (context, child) => LinearProgressIndicator(
-                            value: .22 + .65 * _glow.value,
-                            backgroundColor: const Color(0xFFEBD1E9),
-                            valueColor: const AlwaysStoppedAnimation<Color>(
-                              Color(0xFFF350AA)),
-                            minHeight: 8,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ]),
-                ),
+          IgnorePointer(
+            child: AnimatedBuilder(
+              animation: _animation,
+              builder: (context, child) => CustomPaint(
+                painter: _V1511Glints(_animation.value),
+                child: const SizedBox.expand(),
               ),
             ),
           ),
@@ -125,30 +58,31 @@ class _V1510PremiumSplashState extends State<V1510PremiumSplash>
   }
 }
 
-class _V1510SparklePainter extends CustomPainter {
-  const _V1510SparklePainter(this.progress);
-  final double progress;
+class _V1511Glints extends CustomPainter {
+  const _V1511Glints(this.phase);
+  final double phase;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final points = <Offset>[
-      const Offset(.14, .26), const Offset(.81, .28),
-      const Offset(.19, .56), const Offset(.85, .63),
-      const Offset(.35, .72), const Offset(.70, .48),
+    // Tiny ambient twinkles. No expensive shaders or image compositing.
+    final centers = <Offset>[
+      const Offset(.13, .17), const Offset(.87, .29),
+      const Offset(.19, .46), const Offset(.77, .52),
+      const Offset(.27, .72), const Offset(.85, .79),
     ];
-    final paint = Paint()..color = const Color(0xEFFFFFCE);
-    for (var i = 0; i < points.length; i++) {
-      final x = points[i].dx * size.width;
-      final y = points[i].dy * size.height;
-      final r = 3.0 + (math.sin(progress * math.pi * 2 + i) + 1) * 2.6;
-      paint.strokeWidth = 2;
+    for (var i = 0; i < centers.length; i++) {
+      final twinkle = .5 + .5 * math.sin((phase * math.pi * 2) + i * 1.8);
+      final paint = Paint()
+        ..color = Colors.white.withOpacity(.15 + .65 * twinkle)
+        ..strokeWidth = 1.6;
+      final x = centers[i].dx * size.width;
+      final y = centers[i].dy * size.height;
+      final r = 2 + 4 * twinkle;
       canvas.drawLine(Offset(x-r,y), Offset(x+r,y), paint);
       canvas.drawLine(Offset(x,y-r), Offset(x,y+r), paint);
-      canvas.drawCircle(Offset(x,y), 1.5, paint);
     }
   }
 
   @override
-  bool shouldRepaint(covariant _V1510SparklePainter oldDelegate) =>
-      oldDelegate.progress != progress;
+  bool shouldRepaint(covariant _V1511Glints oldDelegate) => oldDelegate.phase != phase;
 }
